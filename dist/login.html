@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Masuk | Sistem Restoran</title>
+    <script>
+      (() => {
+        'use strict';
+        const root = document.documentElement;
+        const stored = (() => {
+          try { return localStorage.getItem('lte-theme'); } catch { return null; }
+        })();
+        const resolved = stored === 'dark' || stored === 'light'
+          ? stored
+          : (globalThis.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        root.setAttribute('data-bs-theme', resolved);
+        root.style.colorScheme = resolved;
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <meta name="theme-color" content="#0d6efd" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./assets/img/app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./assets/img/app-icon-192.png" />
+    <link rel="preload" href="./css/adminlte.css" as="style" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@fontsource/source-sans-3@5.3.1/index.css"
+      crossorigin="anonymous"
+      media="print"
+      onload="this.media = 'all'"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.2/font/bootstrap-icons.min.css"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="./css/adminlte.css" />
+    <link rel="stylesheet" href="./css/restaurant.css" />
+  </head>
+  <body class="login-page bg-body-secondary">
+    <div class="login-floating-tools">
+      <button
+        type="button"
+        class="btn btn-sm btn-outline-secondary bg-body shadow-sm"
+        data-lte-toggle="fullscreen"
+        aria-label="Layar penuh"
+        title="Layar penuh"
+      >
+        <i data-lte-icon="maximize" class="bi bi-arrows-fullscreen"></i>
+        <i data-lte-icon="minimize" class="bi bi-fullscreen-exit d-none"></i>
+      </button>
+      <div class="dropdown">
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-secondary bg-body shadow-sm dropdown-toggle"
+          data-bs-toggle="dropdown"
+          aria-label="Ubah tema"
+          title="Ubah tema"
+        >
+          <i class="bi bi-circle-half"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><button class="dropdown-item" type="button" data-bs-theme-value="light"><i class="bi bi-sun-fill me-2"></i>Terang</button></li>
+          <li><button class="dropdown-item" type="button" data-bs-theme-value="dark"><i class="bi bi-moon-stars-fill me-2"></i>Gelap</button></li>
+          <li><button class="dropdown-item" type="button" data-bs-theme-value="auto"><i class="bi bi-circle-half me-2"></i>Otomatis</button></li>
+        </ul>
+      </div>
+    </div>
+
+    <main class="login-box app-view-enter" style="width: 370px; max-width: 94vw;">
+      <div class="card card-outline card-primary shadow">
+        <div class="card-header text-center py-3">
+          <h1 class="h3 mb-0">
+            <i class="bi bi-shop-window text-primary me-2"></i><b>Resto</b>Order
+          </h1>
+        </div>
+        <div class="card-body login-card-body">
+          <p class="login-box-msg mb-3">Masuk menggunakan akun <strong>Admin</strong>, <strong>Kasir</strong>, atau <strong>Chef</strong></p>
+
+          <div id="login-error" class="alert alert-danger py-2 d-none" role="alert"></div>
+
+          <form id="login-form" novalidate>
+            <div class="input-group mb-3">
+              <div class="form-floating">
+                <input
+                  id="loginEmail"
+                  type="email"
+                  class="form-control"
+                  placeholder="nama@restoran.local"
+                  required
+                  autocomplete="username"
+                />
+                <label for="loginEmail">Email Staf</label>
+              </div>
+              <div class="input-group-text">
+                <span class="bi bi-envelope"></span>
+              </div>
+            </div>
+            <div class="input-group mb-3">
+              <div class="form-floating">
+                <input
+                  id="loginPassword"
+                  type="password"
+                  class="form-control"
+                  placeholder="Kata Sandi"
+                  required
+                  autocomplete="current-password"
+                />
+                <label for="loginPassword">Kata Sandi</label>
+              </div>
+              <button
+                type="button"
+                id="toggle-pass"
+                class="input-group-text"
+                aria-label="Tampilkan atau sembunyikan kata sandi"
+              >
+                <span class="bi bi-eye"></span>
+              </button>
+            </div>
+            <div class="d-grid">
+              <button id="login-submit" type="submit" class="btn btn-primary btn-lg">
+                <i class="bi bi-box-arrow-in-right me-1"></i> Masuk
+              </button>
+            </div>
+          </form>
+
+          <div id="demo-accounts-box" class="mt-4 pt-3 border-top d-none">
+            <p class="text-secondary small fw-semibold mb-2">
+              <i class="bi bi-info-circle me-1"></i>Akun Uji Coba Mode Lokal (Klik untuk isi otomatis):
+            </p>
+            <div class="d-grid gap-2">
+              <button type="button" class="btn btn-sm btn-outline-danger text-start text-break demo-fill" data-email="admin@restoran.local" data-pass="admin123">
+                <span class="badge text-bg-danger me-1">Admin</span> admin@restoran.local / admin123
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-primary text-start text-break demo-fill" data-email="kasir@restoran.local" data-pass="kasir123">
+                <span class="badge text-bg-primary me-1">Kasir</span> kasir@restoran.local / kasir123
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-warning text-start text-break demo-fill" data-email="chef@restoran.local" data-pass="chef123">
+                <span class="badge text-bg-warning me-1">Chef</span> chef@restoran.local / chef123
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.9/dist/js/bootstrap.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <script src="./js/adminlte.js"></script>
+    <script type="module">
+      import {
+        bindFullscreenEnhancement,
+        getRuntimeConfig,
+        homePageForRole,
+        loginWithEmailPassword,
+        registerServiceWorker,
+      } from './js/app-client.js';
+
+      registerServiceWorker();
+      bindFullscreenEnhancement();
+
+      const form = document.getElementById('login-form');
+      const emailEl = document.getElementById('loginEmail');
+      const passEl = document.getElementById('loginPassword');
+      const errEl = document.getElementById('login-error');
+      const submitBtn = document.getElementById('login-submit');
+      const demoBox = document.getElementById('demo-accounts-box');
+
+      document.getElementById('toggle-pass').addEventListener('click', () => {
+        const isPass = passEl.type === 'password';
+        passEl.type = isPass ? 'text' : 'password';
+      });
+
+      for (const btn of document.querySelectorAll('.demo-fill')) {
+        btn.addEventListener('click', () => {
+          emailEl.value = btn.dataset.email;
+          passEl.value = btn.dataset.pass;
+          errEl.classList.add('d-none');
+        });
+      }
+
+      (async () => {
+        try {
+          const cfg = await getRuntimeConfig();
+          if (cfg.mode !== 'firebase') {
+            demoBox.classList.remove('d-none');
+          }
+        } catch {
+          // Abaikan jika gagal mengambil konfigurasi awal
+        }
+      })();
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        errEl.classList.add('d-none');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Memproses...';
+        try {
+          const res = await loginWithEmailPassword(emailEl.value.trim(), passEl.value);
+          globalThis.location.href = homePageForRole(res.user.role);
+        } catch (err) {
+          errEl.textContent = err.message || 'Gagal masuk.';
+          errEl.classList.remove('d-none');
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i> Masuk';
+        }
+      });
+    </script>
+  </body>
+</html>

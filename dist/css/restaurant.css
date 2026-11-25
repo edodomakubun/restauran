@@ -1,0 +1,596 @@
+/* Gaya khusus Sistem Restoran (terintegrasi penuh dengan Bootstrap 5 & AdminLTE 4) */
+
+:root,
+[data-bs-theme='light'],
+[data-bs-theme='dark'] {
+  --lte-sidebar-width: 220px;
+  --bs-body-font-size: 0.915rem;
+}
+
+/* Skala layout compact global (tetap menghormati utility class p-0 / p-2) */
+.app-header {
+  min-height: 44px;
+  padding-top: 0.12rem;
+  padding-bottom: 0.12rem;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.app-header .nav-link {
+  height: 2.1rem;
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+  font-size: 0.88rem;
+}
+
+.sidebar-brand {
+  height: 44px;
+  padding: 0.45rem 0.75rem;
+}
+
+.sidebar-menu .nav-link {
+  padding: 0.42rem 0.75rem;
+  font-size: 0.88rem;
+}
+
+.sidebar-menu .nav-header {
+  padding: 0.45rem 0.75rem 0.25rem;
+  font-size: 0.72rem;
+}
+
+.app-content-header {
+  padding: 0.6rem 0.45rem;
+}
+
+.app-content-header h1 {
+  font-size: 1.25rem !important;
+}
+
+.app-content {
+  padding: 0 0.35rem;
+}
+
+.app-footer {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.78rem;
+}
+
+:where(.card-header) {
+  padding: 0.52rem 0.85rem;
+}
+
+:where(.card-title) {
+  font-size: 0.96rem;
+}
+
+:where(.card-body) {
+  padding: 0.72rem 0.85rem;
+}
+
+:where(.card-footer) {
+  padding: 0.48rem 0.85rem;
+}
+
+:where(.table) > :not(caption) > * > * {
+  padding: 0.42rem 0.6rem;
+  font-size: 0.86rem;
+}
+
+.small-box .inner {
+  padding: 0.65rem 0.8rem;
+}
+
+.small-box .inner h3 {
+  font-size: 1.5rem;
+  margin-bottom: 0.1rem;
+}
+
+.small-box .inner p {
+  font-size: 0.82rem;
+  margin-bottom: 0;
+}
+
+.small-box .small-box-icon {
+  font-size: 2.5rem;
+  top: 10px;
+}
+
+.small-box .small-box-footer {
+  padding: 0.25rem 0;
+  font-size: 0.78rem;
+}
+
+.menu-pick-tile .text-secondary {
+  font-size: 0.78rem;
+}
+
+@view-transition {
+  navigation: auto;
+}
+
+html.auth-pending body {
+  visibility: hidden !important;
+}
+
+html,
+body {
+  overscroll-behavior-y: contain;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Progress bar tipis di bagian paling atas ala aplikasi native */
+.app-top-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 1200;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  background: linear-gradient(90deg, var(--bs-primary) 0%, #38bdf8 50%, var(--bs-primary) 100%);
+  background-size: 200% 100%;
+  animation: appProgressShimmer 1.1s linear infinite;
+}
+
+.app-top-progress.is-active {
+  opacity: 1;
+}
+
+@keyframes appProgressShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Sticky glassmorphic navbar selaras dengan fixed-header AdminLTE 4 (konfigurasi tinggi di bagian atas) */
+
+/* Animasi transisi halus setiap pergantian tampilan di App-Shell */
+@keyframes appViewEnter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.app-view-enter .app-content-header,
+.app-view-enter .app-content {
+  animation: appViewEnter 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Sentuhan taktil ala aplikasi mobile */
+.btn,
+.menu-pick-tile,
+.mobile-bottom-item {
+  touch-action: manipulation;
+}
+
+.btn:active:not(:disabled),
+.menu-pick-tile:active:not(.menu-unavailable),
+.mobile-bottom-item:active {
+  transform: scale(0.975);
+}
+
+.app-main,
+.app-content,
+.card,
+.min-w-0 {
+  min-width: 0;
+}
+
+.menu-pick-tile {
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+  user-select: none;
+}
+
+.menu-pick-tile:hover:not(.menu-unavailable) {
+  transform: translateY(-2px);
+  border-color: var(--bs-primary) !important;
+  box-shadow: 0 0.25rem 0.75rem rgba(var(--bs-primary-rgb), 0.15);
+}
+
+.menu-pick-tile.menu-unavailable {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.service-type-btn {
+  min-height: 32px;
+  font-weight: 600;
+  font-size: 0.82rem;
+}
+
+.cart-qty-box {
+  min-width: 88px;
+}
+
+/* Tiket Layar Chef (Kitchen Display System) */
+.chef-ticket {
+  border-top-width: 5px !important;
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+  height: auto;
+}
+
+@media (min-width: 768px) {
+  .chef-ticket {
+    height: 100%;
+  }
+}
+
+.chef-ticket-actions {
+  flex-shrink: 0;
+}
+
+.chef-ticket.status-pending {
+  border-top-color: var(--bs-warning) !important;
+}
+
+.chef-ticket.status-cooking {
+  border-top-color: var(--bs-primary) !important;
+}
+
+.chef-ticket.status-ready {
+  border-top-color: var(--bs-success) !important;
+}
+
+.chef-ticket.status-cancelled {
+  border-top-color: var(--bs-danger) !important;
+  opacity: 0.92;
+}
+
+.chef-ticket.status-completed {
+  border-top-color: var(--bs-secondary) !important;
+  opacity: 0.78;
+}
+
+.chef-qty-pill {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 1.75rem;
+  padding: 0 0.4rem;
+  border-radius: 0.35rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.chef-service-banner {
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  word-break: break-word;
+}
+
+.chef-item-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.chef-action-btn {
+  min-height: 40px;
+}
+
+.chef-section-box {
+  border: 1px solid var(--bs-border-color);
+  border-radius: 0.45rem;
+  padding: 0.5rem 0.6rem;
+  background-color: var(--bs-tertiary-bg);
+}
+
+.chef-section-box.is-ready {
+  border-color: rgba(var(--bs-success-rgb), 0.45);
+  background-color: rgba(var(--bs-success-rgb), 0.06);
+}
+
+.chef-section-box.is-completed {
+  opacity: 0.78;
+}
+
+.chef-section-btn {
+  min-height: 36px;
+  font-size: 0.84rem;
+}
+
+.chef-more-pill {
+  font-size: 0.75rem;
+  color: var(--bs-secondary-color);
+  font-style: italic;
+}
+
+.chef-item-done-btn {
+  font-size: 0.72rem;
+  padding: 0.18rem 0.48rem;
+  white-space: nowrap;
+  min-height: 28px;
+}
+
+@keyframes pulseEdited {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+.badge-edited-pulse {
+  animation: pulseEdited 1.8s infinite;
+}
+
+.app-toast-container {
+  z-index: 1090;
+  max-width: calc(100vw - 1rem);
+}
+
+/* Mobile Bottom Navigation Bar ala aplikasi POS/KDS */
+.mobile-bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1035;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  background-color: rgba(var(--bs-body-bg-rgb), 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--bs-border-color);
+  padding: 0.15rem 0.2rem calc(0.15rem + env(safe-area-inset-bottom));
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.mobile-bottom-item {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.08rem;
+  padding: 0.25rem 0.2rem;
+  border: 0;
+  background: transparent;
+  color: var(--bs-secondary-color);
+  text-decoration: none;
+  font-size: 0.66rem;
+  font-weight: 600;
+  border-radius: 0.45rem;
+  transition: color 0.15s ease, background-color 0.15s ease, transform 0.1s ease;
+}
+
+.mobile-bottom-item i {
+  font-size: 1.05rem;
+  line-height: 1.1;
+}
+
+.mobile-bottom-item span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.mobile-bottom-item.active {
+  color: var(--bs-primary);
+  background-color: rgba(var(--bs-primary-rgb), 0.1);
+}
+
+/* Floating top bar di halaman login */
+.login-floating-tools {
+  position: fixed;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+@media (max-width: 991.98px) {
+  body.has-mobile-nav .app-main {
+    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom));
+  }
+
+  body.has-mobile-nav .app-footer {
+    margin-bottom: calc(3.3rem + env(safe-area-inset-bottom));
+  }
+
+  body.has-mobile-nav .app-toast-container {
+    bottom: calc(3.85rem + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* Responsif khusus layar HP kecil (< 576px) */
+@media (max-width: 575.98px) {
+  .app-header .container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  .app-header .navbar-nav .nav-link {
+    padding-left: 0.45rem;
+    padding-right: 0.45rem;
+  }
+
+  .small-box .inner h3 {
+    font-size: 1.35rem;
+    word-break: break-word;
+  }
+
+  .chef-stat-pill {
+    font-size: 0.78rem !important;
+    padding: 0.35rem 0.5rem;
+  }
+
+  .chef-ticket .card-header .fs-5 {
+    font-size: 1rem !important;
+  }
+
+  .login-box {
+    width: 100% !important;
+    padding: 0 0.75rem;
+  }
+}
+
+/* Wizard Pemesanan (selaras AdminLTE 4 dist/forms/wizard.html - compact) */
+.wizard-steps {
+  counter-reset: step;
+  list-style: none;
+  padding: 0;
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+}
+
+.wizard-steps::before {
+  content: '';
+  position: absolute;
+  top: 0.85rem;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--bs-border-color);
+  z-index: 0;
+}
+
+.wizard-steps li {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 0;
+  background: var(--bs-body-bg);
+  padding: 0 0.35rem;
+  text-align: center;
+  color: var(--bs-secondary-color);
+  font-size: 0.8rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.wizard-steps li::before {
+  counter-increment: step;
+  content: counter(step);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  margin: 0 auto 0.25rem;
+  border-radius: 50%;
+  background: var(--bs-tertiary-bg);
+  border: 2px solid var(--bs-border-color);
+  color: var(--bs-secondary-color);
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: all 0.18s ease;
+}
+
+.wizard-steps li.active {
+  color: var(--bs-primary);
+  font-weight: 600;
+}
+
+.wizard-steps li.active::before {
+  background: var(--bs-primary);
+  border-color: var(--bs-primary);
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(var(--bs-primary-rgb), 0.18);
+}
+
+.wizard-steps li.completed {
+  color: var(--bs-success);
+  font-weight: 600;
+}
+
+.wizard-steps li.completed::before {
+  background: var(--bs-success);
+  border-color: var(--bs-success);
+  color: #fff;
+  content: '\f633';
+  font-family: 'bootstrap-icons';
+}
+
+@media (max-width: 575.98px) {
+  .wizard-steps li {
+    font-size: 0.72rem;
+    padding: 0 0.2rem;
+  }
+
+  .wizard-steps li::before {
+    width: 1.55rem;
+    height: 1.55rem;
+    font-size: 0.78rem;
+  }
+
+  .wizard-steps::before {
+    top: 0.775rem;
+  }
+}
+
+/* Penyesuaian Wizard Pesanan agar ringkas (compact) */
+.wizard-compact .card-title {
+  font-size: 0.92rem;
+}
+
+.wizard-compact .wizard-steps::before {
+  top: 0.7rem;
+}
+
+.wizard-compact .wizard-steps li {
+  font-size: 0.74rem;
+}
+
+.wizard-compact .wizard-steps li::before {
+  width: 1.4rem;
+  height: 1.4rem;
+  font-size: 0.74rem;
+  margin-bottom: 0.18rem;
+}
+
+.wizard-compact .menu-pick-tile {
+  min-height: 56px;
+}
+
+.wizard-compact .menu-pick-tile .badge {
+  font-size: 0.65rem;
+  padding: 0.18em 0.42em;
+}
+
+.wizard-compact .menu-pick-title {
+  font-size: 0.8rem;
+  line-height: 1.2;
+}
+
+.wizard-compact .menu-pick-price {
+  font-size: 0.74rem;
+}
+
+.wizard-compact .list-group-item {
+  font-size: 0.82rem;
+}
+
+/* Panel tombol catatan cepat per menu (bisa diciutkan) */
+.quick-note-toggle {
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+
+.quick-note-label {
+  font-size: 0.68rem;
+  line-height: 1.1;
+}
+
+.quick-note-chip {
+  font-size: 0.71rem;
+  padding: 0.14rem 0.44rem;
+  border-radius: 999px;
+  line-height: 1.2;
+  touch-action: manipulation;
+}
+
+.quick-note-collapse-btn {
+  font-size: 0.7rem;
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "restoran-app",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-11-25",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true,
+    "traces": {
+      "enabled": true
+    }
+  },
+  "vars": {
+    "FIREBASE_PROJECT_ID": "restoran-app-id",
+    "FIREBASE_WEB_API_KEY": "AIzaSyB3UIu4cAihFqm8NS7qvaFIcgCopE8M9Zo",
+    "FIREBASE_AUTH_DOMAIN": "restoran-app-id.firebaseapp.com",
+    "FIREBASE_APP_ID": "1:272776957079:web:d9afa2d3316d244c812dd2"
+  }
+}

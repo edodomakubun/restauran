@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>RestoOrder | Kelola Daftar Menu</title>
+    <script>
+      (() => {
+        'use strict';
+        const root = document.documentElement;
+        const stored = (() => {
+          try { return localStorage.getItem('lte-theme'); } catch { return null; }
+        })();
+        const resolved = stored === 'dark' || stored === 'light'
+          ? stored
+          : (globalThis.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        root.setAttribute('data-bs-theme', resolved);
+        root.style.colorScheme = resolved;
+        try {
+          const u = JSON.parse(localStorage.getItem('restoran_auth_user') || 'null');
+          if (!u || !u.role) {
+            root.classList.add('auth-pending');
+            globalThis.location.replace('./login.html');
+          } else if (u.role !== 'admin') {
+            root.classList.add('auth-pending');
+            globalThis.location.replace(u.role === 'chef' ? './chef.html' : './pesanan.html');
+          }
+        } catch {
+          root.classList.add('auth-pending');
+          globalThis.location.replace('./login.html');
+        }
+      })();
+    </script>
+    <style>html.auth-pending body{visibility:hidden}</style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <meta name="theme-color" content="#0d6efd" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./assets/img/app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./assets/img/app-icon-192.png" />
+    <link rel="preload" href="./css/adminlte.css" as="style" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/source-sans-3@5.3.1/index.css" crossorigin="anonymous" media="print" onload="this.media = 'all'" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.17.0/styles/overlayscrollbars.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.2/font/bootstrap-icons.min.css" crossorigin="anonymous" />
+    <link rel="stylesheet" href="./css/adminlte.css" />
+    <link rel="stylesheet" href="./css/restaurant.css" />
+  </head>
+  <body class="layout-fixed fixed-header sidebar-expand-lg bg-body-tertiary">
+    <div class="app-wrapper">
+      <nav class="app-header navbar navbar-expand bg-body">
+        <div class="container-fluid">
+          <ul class="navbar-nav">
+            <li class="nav-item">
+              <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button" aria-label="Alihkan bilah sisi"><i class="bi bi-list"></i></a>
+            </li>
+            <li class="nav-item d-none d-md-block">
+              <a href="./pesanan.html" class="nav-link"><i class="bi bi-receipt-cutoff me-1"></i>Kasir / Pesanan</a>
+            </li>
+            <li class="nav-item d-none d-md-block">
+              <a href="./chef.html" class="nav-link"><i class="bi bi-fire me-1"></i>Layar Chef</a>
+            </li>
+          </ul>
+          <ul class="navbar-nav ms-auto align-items-center gap-1 gap-sm-2">
+            <li class="nav-item form-check form-switch mb-0 me-1 d-flex align-items-center gap-1">
+              <input class="form-check-input mt-0" type="checkbox" id="sound-toggle" checked aria-label="Suara notifikasi" />
+              <label class="form-check-label small" for="sound-toggle">
+                <i class="bi bi-volume-up"></i><span class="d-none d-sm-inline"> Suara</span>
+              </label>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" data-lte-toggle="fullscreen" aria-label="Layar penuh" title="Layar penuh">
+                <i data-lte-icon="maximize" class="bi bi-arrows-fullscreen"></i>
+                <i data-lte-icon="minimize" class="bi bi-fullscreen-exit d-none"></i>
+              </a>
+            </li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-label="Ubah tema"><i class="bi bi-circle-half"></i></a>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><button class="dropdown-item" type="button" data-bs-theme-value="light"><i class="bi bi-sun-fill me-2"></i>Terang</button></li>
+                <li><button class="dropdown-item" type="button" data-bs-theme-value="dark"><i class="bi bi-moon-stars-fill me-2"></i>Gelap</button></li>
+                <li><button class="dropdown-item" type="button" data-bs-theme-value="auto"><i class="bi bi-circle-half me-2"></i>Otomatis</button></li>
+              </ul>
+            </li>
+            <li class="nav-item d-flex align-items-center gap-1 gap-sm-2 ps-2 border-start">
+              <span id="nav-user-role" class="badge text-bg-secondary">-</span>
+              <span id="nav-user-name" class="fw-semibold small d-none d-md-inline">-</span>
+              <button id="btn-logout" type="button" class="btn btn-sm btn-outline-danger" aria-label="Keluar"><i class="bi bi-box-arrow-right"></i> <span class="d-none d-sm-inline">Keluar</span></button>
+            </li>
+          </ul>
+        </div>
+      </nav>
+
+      <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
+        <div class="sidebar-brand">
+          <a href="./index.html" class="brand-link">
+            <img src="./assets/img/app-icon.svg" alt="Logo RestoOrder" class="brand-image opacity-90 shadow rounded" />
+            <span class="brand-text fw-light"><b>Resto</b>Order</span>
+          </a>
+        </div>
+        <div class="sidebar-wrapper">
+          <nav class="mt-2" aria-label="Navigasi restoran">
+            <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" data-accordion="false" id="navigation"></ul>
+          </nav>
+        </div>
+      </aside>
+
+      <main class="app-main">
+        <div class="app-content-header">
+          <div class="container-fluid">
+            <div class="row align-items-center">
+              <div class="col-sm-6"><h1 class="mb-0 fs-3">Kelola Daftar Menu</h1></div>
+              <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
+                <button id="btn-open-add-menu" type="button" class="btn btn-primary">
+                  <i class="bi bi-plus-circle me-1"></i> Tambah Menu Baru
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="app-content">
+          <div class="container-fluid">
+            <div class="card">
+              <div class="card-header d-flex flex-column flex-sm-row gap-2 justify-content-between align-items-stretch align-items-sm-center">
+                <div class="d-flex gap-2 align-items-center justify-content-between">
+                  <select id="filter-cat" class="form-select form-select-sm" style="width: auto;">
+                    <option value="all">Semua Kategori</option>
+                    <option value="makanan">Makanan</option>
+                    <option value="minuman">Minuman</option>
+                  </select>
+                  <span id="menu-count" class="small text-secondary">0 menu</span>
+                </div>
+                <input id="search-menu" type="search" class="form-control form-control-sm w-100 w-sm-auto" placeholder="Cari nama menu..." style="min-width: 190px; max-width: 280px;" />
+              </div>
+              <div class="card-body table-responsive p-0">
+                <table class="table table-hover align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th>Nama Menu</th>
+                      <th>Kategori</th>
+                      <th>Harga</th>
+                      <th>Ketersediaan</th>
+                      <th class="text-end">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="menu-tbody">
+                    <tr><td colspan="5" class="text-center text-secondary py-4">Memuat daftar menu...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div id="admin-menu-pagination-footer" class="card-footer d-none d-flex flex-wrap justify-content-between align-items-center gap-2 py-2">
+                <span id="admin-menu-page-info" class="small text-secondary"></span>
+                <ul id="admin-menu-pagination" class="pagination pagination-sm m-0"></ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <footer class="app-footer">
+        <strong>RestoOrder</strong> — Kelola Daftar Menu (Admin).
+      </footer>
+    </div>
+
+    <div id="app-page-modals">
+      <div class="modal fade" id="menuModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+          <form id="menu-form" class="modal-content">
+            <div class="modal-header">
+              <h5 id="menu-modal-title" class="modal-title">Tambah Menu</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <label for="m-name" class="form-label">Nama Menu</label>
+                <input id="m-name" type="text" class="form-control" required placeholder="Contoh: Nasi Uduk Komplit" />
+              </div>
+              <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                  <label for="m-cat" class="form-label">Kategori</label>
+                  <select id="m-cat" class="form-select">
+                    <option value="makanan">Makanan</option>
+                    <option value="minuman">Minuman</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label for="m-price" class="form-label">Harga (Rp)</label>
+                  <input id="m-price" type="number" min="0" step="500" class="form-control" required value="15000" />
+                </div>
+              </div>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="m-avail" checked />
+                <label class="form-check-label" for="m-avail">Menu Tersedia untuk Dipesan</label>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+              <button type="submit" class="btn btn-primary">Simpan Menu</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <nav id="mobile-bottom-nav" class="mobile-bottom-nav d-lg-none" aria-label="Navigasi cepat aplikasi"></nav>
+
+    <script src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.17.0/browser/overlayscrollbars.browser.es6.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.9/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
+    <script src="./js/adminlte.js"></script>
+    <script type="module">
+      import { initAppShell } from './js/app-router.js';
+      void initAppShell({ pageId: 'menu', allowedRoles: ['admin'] });
+    </script>
+  </body>
+</html>

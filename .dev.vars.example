@@ -1,0 +1,6 @@
+# Salin file ini menjadi .dev.vars saat siap menghubungkan proyek Firebase asli
+FIREBASE_PROJECT_ID=
+FIREBASE_CLIENT_EMAIL=
+FIREBASE_PRIVATE_KEY=
+FIREBASE_WEB_API_KEY=
+LOCAL_AUTH_SECRET=restoran-dev-local-secret-change-in-prod

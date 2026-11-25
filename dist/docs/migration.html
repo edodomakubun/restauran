@@ -1,0 +1,1445 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Migrasi dari v3 | AdminLTE 4</title>
+
+    <!--begin::Theme Init (prevents flash of incorrect theme on load, #6043)-->
+    <script>
+      (() => {
+        'use strict';
+        const root = document.documentElement;
+
+        // Applications with their own theming opt out of AdminLTE's color mode
+        // entirely, here as well as in the bundle.
+        if (root.getAttribute('data-lte-color-mode') === 'off') {
+          return;
+        }
+
+        const STORAGE_KEY = 'lte-theme';
+        let stored = null;
+        try {
+          stored = localStorage.getItem(STORAGE_KEY);
+        } catch {
+          // localStorage may be unavailable (private mode, sandboxed iframe).
+        }
+        // Mirror the precedence in color-mode.ts: the visitor's stored choice
+        // wins, then a theme this page declared itself, then the OS preference.
+        const authored = root.getAttribute('data-bs-theme');
+        let resolved = 'light';
+        if (stored === 'dark' || stored === 'light') {
+          resolved = stored;
+        } else if (authored === 'dark' || authored === 'light') {
+          resolved = authored;
+        } else if (globalThis.matchMedia('(prefers-color-scheme: dark)').matches) {
+          resolved = 'dark';
+        }
+        root.setAttribute('data-bs-theme', resolved);
+        root.style.colorScheme = resolved;
+        // Flag values computed here, so the bundle does not mistake them for a
+        // theme the page declared and stop following the OS preference.
+        if (resolved !== authored) {
+          root.setAttribute('data-lte-theme-resolved', '');
+        }
+      })();
+    </script>
+    <!--end::Theme Init-->
+
+    <!--begin::Accessibility Meta Tags-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#007bff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1a1a1a" media="(prefers-color-scheme: dark)" />
+    <!--end::Accessibility Meta Tags-->
+
+    <!--begin::Primary Meta Tags-->
+    <meta name="title" content="Migrasi dari v3 | AdminLTE 4" />
+    <meta name="author" content="ColorlibHQ" />
+    <meta
+      name="description"
+      content="AdminLTE adalah templat dasbor admin Bootstrap 5 gratis dengan hampir 50 halaman contoh, dibangun menggunakan vanilla JS dan dirancang dengan mengutamakan aksesibilitas."
+    />
+    <meta
+      name="keywords"
+      content="bootstrap 5, bootstrap, bootstrap 5 admin dashboard, bootstrap 5 dashboard, bootstrap 5 charts, bootstrap 5 calendar, bootstrap 5 datepicker, bootstrap 5 tables, bootstrap 5 datatable, vanilla js datatable, colorlibhq, colorlibhq dashboard, colorlibhq admin dashboard, accessible admin panel"
+    />
+    <!--end::Primary Meta Tags-->
+
+    <!--begin::Accessibility Features-->
+    <!-- Skip links will be dynamically added by accessibility.js -->
+    <meta name="supported-color-schemes" content="light dark" />
+    <link rel="preload" href="../css/adminlte.css" as="style" />
+    <!--end::Accessibility Features-->
+
+    <!--begin::Fonts-->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@fontsource/source-sans-3@5.3.1/index.css"
+      integrity="sha256-VzMk9RVNVApO0cXfOO7il3dD8OPyu0aDyyLDd8EEGk8="
+      crossorigin="anonymous"
+      media="print"
+      onload="this.media = 'all'"
+    />
+    <!--end::Fonts-->
+
+    <!--begin::Third Party Plugin(OverlayScrollbars)-->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.17.0/styles/overlayscrollbars.min.css"
+      crossorigin="anonymous"
+    />
+    <!--end::Third Party Plugin(OverlayScrollbars)-->
+
+    <!--begin::Third Party Plugin(Bootstrap Icons)-->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.2/font/bootstrap-icons.min.css"
+      crossorigin="anonymous"
+    />
+    <!--end::Third Party Plugin(Bootstrap Icons)-->
+
+    <!--begin::Required Plugin(AdminLTE)-->
+    <link rel="stylesheet" href="../css/adminlte.css" />
+    <!--end::Required Plugin(AdminLTE)-->
+    <link rel="stylesheet" href="../css/adminlte-docs.css" />
+
+    <!--email_off-->
+  </head>
+  <body class="layout-fixed sidebar-expand-lg bg-body-tertiary docs-page">
+    <div class="app-wrapper">
+      <!--begin::Header-->
+      <nav class="app-header navbar navbar-expand bg-body">
+        <!--begin::Container-->
+        <div class="container-fluid">
+          <!--begin::Start Navbar Links-->
+          <ul class="navbar-nav">
+            <li class="nav-item">
+              <a
+                class="nav-link"
+                data-lte-toggle="sidebar"
+                href="#"
+                role="button"
+                aria-label="Alihkan bilah sisi"
+              >
+                <i class="bi bi-list"></i>
+              </a>
+            </li>
+
+            <li class="nav-item d-none d-md-block">
+              <a href="../docs/introduction.html" class="nav-link"> <i class="bi bi-book me-1" aria-hidden="true"></i> Dokumentasi </a>
+            </li>
+            <li class="nav-item d-none d-md-block">
+              <a href="../index.html" class="nav-link"> <i class="bi bi-arrow-left me-1" aria-hidden="true"></i> Kembali ke pratinjau langsung </a>
+            </li>
+          </ul>
+          <!--end::Start Navbar Links-->
+
+          <!--begin::Navbar Search-->
+          <form
+            class="navbar-search d-none d-xl-block ms-3"
+            role="search"
+            action="../pages/search-results.html"
+          >
+            <label for="navbar-search-input" class="visually-hidden">Cari</label>
+            <div class="navbar-search-field">
+              <input
+                type="search"
+                id="navbar-search-input"
+                name="q"
+                class="form-control"
+                placeholder="Cari…"
+                autocomplete="off"
+              />
+              <button class="navbar-search-submit" type="submit" aria-label="Kirim pencarian">
+                <i class="bi bi-search" aria-hidden="true"></i>
+              </button>
+            </div>
+          </form>
+          <!--end::Navbar Search-->
+
+          <!--begin::End Navbar Links-->
+          <ul class="navbar-nav ms-auto">
+            <!--begin::Search (small screens: the field above is hidden, so link to the search page)-->
+            <li class="nav-item d-xl-none">
+              <a class="nav-link" href="../pages/search-results.html" aria-label="Cari">
+                <i class="bi bi-search" aria-hidden="true"></i>
+              </a>
+            </li>
+            <!--end::Search-->
+            <!--begin::Messages Dropdown Menu-->
+            <li class="nav-item dropdown">
+              <a
+                class="nav-link"
+                data-bs-toggle="dropdown"
+                href="#"
+                aria-label="Pesan: 3 belum dibaca"
+              >
+                <i class="bi bi-chat-text"></i>
+                <span class="navbar-badge badge text-bg-danger">3</span>
+              </a>
+              <div class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
+                <a href="#" class="dropdown-item">
+                  <!--begin::Message-->
+                  <div class="d-flex">
+                    <div class="flex-shrink-0">
+                      <img
+                        src="../assets/img/user1-128x128.jpg"
+                        alt=""
+                        class="img-size-50 rounded-circle me-3"
+                      />
+                    </div>
+                    <div class="flex-grow-1">
+                      <p class="dropdown-item-title">
+                        Brad Diesel <span class="float-end fs-7 text-danger"
+                          ><i class="bi bi-star-fill"></i
+                        ></span>
+                      </p>
+                      <p class="fs-7">Hubungi saya kapan saja Anda bisa...</p>
+                      <p class="fs-7 text-secondary">
+                        <i class="bi bi-clock-fill me-1"></i> 4 Jam Lalu
+                      </p>
+                    </div>
+                  </div>
+                  <!--end::Message-->
+                </a>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item">
+                  <!--begin::Message-->
+                  <div class="d-flex">
+                    <div class="flex-shrink-0">
+                      <img
+                        src="../assets/img/user8-128x128.jpg"
+                        alt=""
+                        class="img-size-50 rounded-circle me-3"
+                      />
+                    </div>
+                    <div class="flex-grow-1">
+                      <p class="dropdown-item-title">
+                        John Pierce <span class="float-end fs-7 text-secondary">
+                          <i class="bi bi-star-fill"></i>
+                        </span>
+                      </p>
+                      <p class="fs-7">Pesanmu sudah saya terima, bro</p>
+                      <p class="fs-7 text-secondary">
+                        <i class="bi bi-clock-fill me-1"></i> 4 Jam Lalu
+                      </p>
+                    </div>
+                  </div>
+                  <!--end::Message-->
+                </a>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item">
+                  <!--begin::Message-->
+                  <div class="d-flex">
+                    <div class="flex-shrink-0">
+                      <img
+                        src="../assets/img/user3-128x128.jpg"
+                        alt=""
+                        class="img-size-50 rounded-circle me-3"
+                      />
+                    </div>
+                    <div class="flex-grow-1">
+                      <p class="dropdown-item-title">
+                        Nora Silvester <span class="float-end fs-7 text-warning">
+                          <i class="bi bi-star-fill"></i>
+                        </span>
+                      </p>
+                      <p class="fs-7">Subjek ditulis di sini</p>
+                      <p class="fs-7 text-secondary">
+                        <i class="bi bi-clock-fill me-1"></i> 4 Jam Lalu
+                      </p>
+                    </div>
+                  </div>
+                  <!--end::Message-->
+                </a>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item dropdown-footer">Lihat Semua Pesan</a>
+              </div>
+            </li>
+            <!--end::Messages Dropdown Menu-->
+
+            <!--begin::Notifications Dropdown Menu-->
+            <li class="nav-item dropdown">
+              <a
+                class="nav-link"
+                data-bs-toggle="dropdown"
+                href="#"
+                aria-label="Notifikasi: 15 belum dibaca"
+              >
+                <i class="bi bi-bell-fill"></i>
+                <span class="navbar-badge badge text-bg-warning">15</span>
+              </a>
+              <div class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
+                <span class="dropdown-item dropdown-header">15 Notifikasi</span>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item">
+                  <i class="bi bi-envelope me-2"></i> 4 pesan baru <span class="float-end text-secondary fs-7">3 menit</span>
+                </a>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item">
+                  <i class="bi bi-people-fill me-2"></i> 8 permintaan pertemanan <span class="float-end text-secondary fs-7">12 jam</span>
+                </a>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item">
+                  <i class="bi bi-file-earmark-fill me-2"></i> 3 laporan baru <span class="float-end text-secondary fs-7">2 hari</span>
+                </a>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item dropdown-footer"> Lihat Semua Notifikasi </a>
+              </div>
+            </li>
+            <!--end::Notifications Dropdown Menu-->
+
+            <!--begin::Language Menu-->
+            <!-- Markup only: swapping the locale is the application's job. The docs
+           Recipes page shows how to wire this to a real locale switch. -->
+            <li class="nav-item dropdown">
+              <a
+                class="nav-link"
+                href="#"
+                id="language-menu"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                aria-label="Ubah bahasa, bahasa saat ini Bahasa Inggris"
+              >
+                <i class="bi bi-translate" aria-hidden="true"></i>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="language-menu">
+                <li>
+                  <a class="dropdown-item active" href="#" hreflang="en" aria-current="true"> Bahasa Inggris <i class="bi bi-check-lg ms-2" aria-hidden="true"></i> </a>
+                </li>
+                <li><a class="dropdown-item" href="#" hreflang="es">Español</a></li>
+                <li><a class="dropdown-item" href="#" hreflang="fr">Français</a></li>
+                <li><a class="dropdown-item" href="#" hreflang="de">Deutsch</a></li>
+                <li><a class="dropdown-item" href="#" hreflang="ar">العربية</a></li>
+              </ul>
+            </li>
+            <!--end::Language Menu-->
+
+            <!--begin::Fullscreen Toggle-->
+            <li class="nav-item">
+              <a
+                class="nav-link"
+                href="#"
+                data-lte-toggle="fullscreen"
+                aria-label="Alihkan layar penuh"
+              >
+                <i data-lte-icon="maximize" class="bi bi-arrows-fullscreen"></i>
+                <i data-lte-icon="minimize" class="bi bi-fullscreen-exit d-none"></i>
+              </a>
+            </li>
+            <!--end::Fullscreen Toggle-->
+
+            <!--begin::Color Mode Toggle (#6010)-->
+            <li class="nav-item dropdown">
+              <a
+                class="nav-link"
+                href="#"
+                id="bd-theme"
+                aria-label="Alihkan skema warna"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <i class="bi bi-sun-fill" data-lte-theme-icon="light"></i>
+                <i class="bi bi-moon-fill d-none" data-lte-theme-icon="dark"></i>
+                <i class="bi bi-circle-half d-none" data-lte-theme-icon="auto"></i>
+              </a>
+              <ul
+                class="dropdown-menu dropdown-menu-end"
+                aria-labelledby="bd-theme"
+                style="--bs-dropdown-min-width: 8rem"
+              >
+                <li>
+                  <button
+                    type="button"
+                    class="dropdown-item d-flex align-items-center"
+                    data-bs-theme-value="light"
+                    aria-pressed="false"
+                  >
+                    <i class="bi bi-sun-fill me-2"></i> Terang <i class="bi bi-check-lg ms-auto d-none"></i>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    class="dropdown-item d-flex align-items-center"
+                    data-bs-theme-value="dark"
+                    aria-pressed="false"
+                  >
+                    <i class="bi bi-moon-fill me-2"></i> Gelap <i class="bi bi-check-lg ms-auto d-none"></i>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    class="dropdown-item d-flex align-items-center active"
+                    data-bs-theme-value="auto"
+                    aria-pressed="true"
+                  >
+                    <i class="bi bi-circle-half me-2"></i> Otomatis <i class="bi bi-check-lg ms-auto d-none"></i>
+                  </button>
+                </li>
+              </ul>
+            </li>
+            <!--end::Color Mode Toggle-->
+
+            <!--begin::User Menu Dropdown-->
+            <li class="nav-item dropdown user-menu">
+              <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                <img
+                  src="../assets/img/user2-160x160.jpg"
+                  class="user-image rounded-circle shadow"
+                  alt="Alexander Pierce"
+                /> <span class="d-none d-xl-inline">Alexander Pierce</span>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
+                <!--begin::User Image-->
+                <li class="user-header text-bg-primary">
+                  <img
+                    src="../assets/img/user2-160x160.jpg"
+                    class="rounded-circle shadow"
+                    alt="Alexander Pierce"
+                  />
+                  <p>
+                    Alexander Pierce - Pengembang Web <small>Anggota sejak Nov. 2023</small>
+                  </p>
+                </li>
+                <!--end::User Image-->
+                <!--begin::Menu Body-->
+                <li class="user-body">
+                  <!--begin::Row-->
+                  <div class="row">
+                    <div class="col-4 text-center">
+                      <a href="#">Pengikut</a>
+                    </div>
+                    <div class="col-4 text-center">
+                      <a href="#">Penjualan</a>
+                    </div>
+                    <div class="col-4 text-center">
+                      <a href="#">Teman</a>
+                    </div>
+                  </div>
+                  <!--end::Row-->
+                </li>
+                <!--end::Menu Body-->
+                <!--begin::Menu Footer-->
+                <li class="user-footer">
+                  <a href="#" class="btn btn-outline-secondary">Profil</a> <a href="#" class="btn btn-outline-danger float-end">Keluar</a>
+                </li>
+                <!--end::Menu Footer-->
+              </ul>
+            </li>
+            <!--end::User Menu Dropdown-->
+          </ul>
+          <!--end::End Navbar Links-->
+        </div>
+        <!--end::Container-->
+      </nav>
+      <!--end::Header-->
+      <!--begin::Sidebar (docs mode)-->
+      <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
+        <!--begin::Sidebar Brand-->
+        <div class="sidebar-brand">
+          <a href="../docs/introduction.html" class="brand-link"> <img
+              src="../assets/img/AdminLTELogo.png"
+              alt="Logo AdminLTE"
+              class="brand-image opacity-75 shadow"
+            /> <span class="brand-text fw-light"> AdminLTE 4 <span class="opacity-75">&middot; Dokumentasi</span> </span> </a>
+        </div>
+        <!--end::Sidebar Brand-->
+        <!--begin::Sidebar Search-->
+        <div class="sidebar-search" role="search">
+          <label for="sidebar-search-input" class="visually-hidden">Filter dokumentasi</label>
+          <input
+            type="search"
+            id="sidebar-search-input"
+            class="form-control form-control-sm"
+            placeholder="Filter dokumentasi…"
+            autocomplete="off"
+            data-lte-toggle="sidebar-search"
+            data-lte-target="#docs-navigation"
+          />
+          <p class="fs-7 text-secondary mt-2 mb-0" data-lte-search-empty role="status" hidden>
+            Tidak ada halaman yang cocok.
+          </p>
+        </div>
+        <!--end::Sidebar Search-->
+        <!--begin::Sidebar Wrapper-->
+        <div class="sidebar-wrapper">
+          <nav class="mt-2" aria-label="Navigasi dokumentasi">
+            <!--begin::Sidebar Menu-->
+            <ul
+              class="nav sidebar-menu flex-column"
+              data-lte-toggle="treeview"
+              data-accordion="false"
+              id="docs-navigation"
+            >
+              <li class="nav-header">MULAI DI SINI</li>
+              <li class="nav-item">
+                <a href="../docs/introduction.html" class="nav-link">
+                  <i class="nav-icon bi bi-download"></i>
+                  <p>Instalasi</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="../docs/getting-started.html" class="nav-link">
+                  <i class="nav-icon bi bi-rocket-takeoff"></i>
+                  <p>Memulai</p>
+                </a>
+              </li>
+
+              <li class="nav-header">DASAR-DASAR</li>
+              <li class="nav-item">
+                <a href="../docs/layout.html" class="nav-link">
+                  <i class="nav-icon bi bi-grip-horizontal"></i>
+                  <p>Kelas Tata Letak</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="../docs/layout-blueprint.html" class="nav-link">
+                  <i class="nav-icon bi bi-diagram-3"></i>
+                  <p>Cetak Biru Tata Letak</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="../docs/customization.html" class="nav-link">
+                  <i class="nav-icon bi bi-palette"></i>
+                  <p>Kustomisasi</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="../docs/color-mode.html" class="nav-link">
+                  <i class="nav-icon bi bi-star-half"></i>
+                  <p>Mode Warna</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="../docs/colors.html" class="nav-link">
+                  <i class="nav-icon bi bi-palette"></i>
+                  <p>Warna</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="../docs/rtl.html" class="nav-link">
+                  <i class="nav-icon bi bi-text-paragraph"></i>
+                  <p>Dukungan RTL</p>
+                </a>
+              </li>
+
+              <li class="nav-header">MEMBANGUN</li>
+              <li class="nav-item">
+                <a href="../docs/recipes.html" class="nav-link">
+                  <i class="nav-icon bi bi-clipboard-check"></i>
+                  <p>Panduan Praktis</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="#" class="nav-link">
+                  <i class="nav-icon bi bi-ui-checks-grid"></i>
+                  <p>
+                    Komponen <i class="nav-arrow bi bi-chevron-right"></i>
+                  </p>
+                </a>
+                <ul class="nav nav-treeview">
+                  <li class="nav-item">
+                    <a href="../docs/components/main-header.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>Header Utama</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="../docs/components/main-sidebar.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>Sidebar Utama</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="../docs/components/card.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>Kartu</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="../docs/components/miscellaneous.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>Lain-lain</p>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="nav-item">
+                <a href="#" class="nav-link">
+                  <i class="nav-icon bi bi-filetype-js"></i>
+                  <p>
+                    Plugin JavaScript <i class="nav-arrow bi bi-chevron-right"></i>
+                  </p>
+                </a>
+                <ul class="nav nav-treeview">
+                  <li class="nav-item">
+                    <a href="../docs/javascript/plugins-overview.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>Ikhtisar</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="../docs/javascript/layout.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>Tata Letak</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="../docs/javascript/pushmenu.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>PushMenu</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="../docs/javascript/treeview.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>Treeview</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="../docs/javascript/card-widget.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>Card Widget</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="../docs/javascript/direct-chat.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>Direct Chat</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="../docs/javascript/fullscreen.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>Layar Penuh</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="../docs/javascript/sidebar-search.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>Pencarian Sidebar</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="../docs/javascript/accessibility.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>Aksesibilitas</p>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="nav-item">
+                <a href="../docs/integrations.html" class="nav-link">
+                  <i class="nav-icon bi bi-puzzle"></i>
+                  <p>Integrasi</p>
+                </a>
+              </li>
+
+              <li class="nav-header">RILIS</li>
+              <li class="nav-item">
+                <a href="../docs/migration.html" class="nav-link active">
+                  <i class="nav-icon bi bi-arrow-up-right-square"></i>
+                  <p>Migrasi dari v3</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="../docs/deployment.html" class="nav-link">
+                  <i class="nav-icon bi bi-cloud-upload"></i>
+                  <p>Deployment</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="../docs/browser-support.html" class="nav-link">
+                  <i class="nav-icon bi bi-browser-chrome"></i>
+                  <p>Dukungan Browser</p>
+                </a>
+              </li>
+
+              <li class="nav-header">SUMBER DAYA</li>
+              <li class="nav-item">
+                <a href="../docs/faq.html" class="nav-link">
+                  <i class="nav-icon bi bi-question-circle"></i>
+                  <p>FAQ</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="../docs/how-to-contribute.html" class="nav-link">
+                  <i class="nav-icon bi bi-people"></i>
+                  <p>Berkontribusi</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="../docs/license.html" class="nav-link">
+                  <i class="nav-icon bi bi-patch-check"></i>
+                  <p>Lisensi</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a
+                  href="https://github.com/ColorlibHQ/AdminLTE"
+                  target="_blank"
+                  rel="noopener"
+                  class="nav-link"
+                >
+                  <i class="nav-icon bi bi-github"></i>
+                  <p>
+                    GitHub <i class="bi bi-box-arrow-up-right ms-1" aria-hidden="true"></i>
+                  </p>
+                </a>
+              </li>
+            </ul>
+            <!--end::Sidebar Menu-->
+
+            <!-- Back to preview CTA (bottom of sidebar) -->
+            <div class="p-3 mt-3 border-top border-secondary border-opacity-25">
+              <a
+                href="../index.html"
+                class="btn btn-sm btn-outline-light w-100 d-flex align-items-center justify-content-center gap-2"
+              > <i class="bi bi-arrow-left" aria-hidden="true"></i> Kembali ke pratinjau langsung </a>
+            </div>
+          </nav>
+        </div>
+        <!--end::Sidebar Wrapper-->
+      </aside>
+      <!--end::Sidebar (docs mode)-->
+      <main class="app-main">
+        <div class="app-content-header">
+          <div class="container-fluid">
+            <div class="row">
+              <div class="col-sm-6">
+                <h1 class="mb-0 fs-3">Migrasi dari v3</h1>
+              </div>
+              <div class="col-sm-6">
+                <nav aria-label="breadcrumb">
+                  <ol class="breadcrumb float-sm-end">
+                    <li class="breadcrumb-item"><a href="#">Dokumentasi</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Migrasi</li>
+                  </ol>
+                </nav>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="app-content">
+          <div class="container-fluid">
+            <div class="row">
+              <div class="col-12">
+                <div class="card">
+                  <div class="card-body">
+                    <p>
+                      AdminLTE 4 adalah penulisan ulang dari dasar. Versi ini menargetkan Bootstrap 5.3, menghapus jQuery, hadir sebagai vanilla JS yang ditulis dengan TypeScript, dan menata ulang struktur kelas CSS. Jika Anda meningkatkan proyek AdminLTE 3, perubahan di bawah ini adalah yang paling mungkin berdampak.
+                    </p>
+                    <h5 id="the-high-level-summary">Ringkasan tingkat tinggi</h5>
+                    <div class="table-responsive" tabindex="0">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th></th>
+                            <th>AdminLTE 3</th>
+                            <th>AdminLTE 4</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td>Framework CSS</td>
+                            <td>Bootstrap 4.6</td>
+                            <td><strong>Bootstrap 5.3</strong></td>
+                          </tr>
+                          <tr>
+                            <td>JavaScript</td>
+                            <td>jQuery + vanilla</td>
+                            <td><strong>Hanya Vanilla TypeScript</strong></td>
+                          </tr>
+                          <tr>
+                            <td>Mode gelap</td>
+                            <td>Kelas <code>.dark-mode</code> manual</td>
+                            <td>
+                              <strong
+                                >Atribut <code>data-bs-theme</code> (bawaan Bootstrap)</strong
+                              >
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>RTL</td>
+                            <td>Build <code>rtl.css</code> terpisah</td>
+                            <td><strong>Dibuat secara otomatis melalui rtlcss</strong></td>
+                          </tr>
+                          <tr>
+                            <td>Dukungan browser</td>
+                            <td>Tersedia fork IE 11</td>
+                            <td>Hanya browser evergreen modern</td>
+                          </tr>
+                          <tr>
+                            <td>Perkakas build</td>
+                            <td>Gulp</td>
+                            <td><strong>Rollup + Sass + PostCSS</strong></td>
+                          </tr>
+                          <tr>
+                            <td>Pustaka ikon</td>
+                            <td>FontAwesome</td>
+                            <td>
+                              <strong>Bootstrap Icons</strong> (Lucide / Tabler Icons didokumentasikan sebagai alternatif)
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>Widget formulir</td>
+                            <td>~25 plugin jQuery dibundel di <code>plugins/</code></td>
+                            <td>
+                              <strong>Tidak ada yang dibundel</strong> — padanan vanilla-JS <a href="#third-party-plugin-replacements">didokumentasikan</a> sebagai gantinya
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <p>
+                      Jika proyek Anda bergantung pada jQuery atau IE 11, tetaplah di AdminLTE 3 — batasan tersebut tidak dapat diubah di v4.
+                    </p>
+                    <h5 id="class-renames">Pengubahan nama kelas</h5>
+                    <p>Pekerjaan cari-dan-ganti yang paling umum:</p>
+                    <div class="table-responsive" tabindex="0">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>AdminLTE 3</th>
+                            <th>AdminLTE 4</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td><code>.wrapper</code></td>
+                            <td><code>.app-wrapper</code></td>
+                          </tr>
+                          <tr>
+                            <td><code>.main-header</code></td>
+                            <td><code>.app-header</code></td>
+                          </tr>
+                          <tr>
+                            <td><code>.main-sidebar</code></td>
+                            <td><code>.app-sidebar</code></td>
+                          </tr>
+                          <tr>
+                            <td><code>.content-wrapper</code></td>
+                            <td><code>.app-main</code></td>
+                          </tr>
+                          <tr>
+                            <td><code>.main-footer</code></td>
+                            <td><code>.app-footer</code></td>
+                          </tr>
+                          <tr>
+                            <td><code>.content-header</code></td>
+                            <td><code>.app-content-header</code></td>
+                          </tr>
+                          <tr>
+                            <td><code>.content</code></td>
+                            <td><code>.app-content</code></td>
+                          </tr>
+                          <tr>
+                            <td><code>.brand-link</code> (di dalam <code>.main-sidebar</code>)</td>
+                            <td><code>.sidebar-brand &gt; .brand-link</code></td>
+                          </tr>
+                          <tr>
+                            <td><code>data-widget=&quot;pushmenu&quot;</code></td>
+                            <td><code>data-lte-toggle=&quot;sidebar&quot;</code></td>
+                          </tr>
+                          <tr>
+                            <td><code>data-widget=&quot;treeview&quot;</code></td>
+                            <td>
+                              <code>data-lte-toggle=&quot;treeview&quot;</code> (pada menu induk)
+                            </td>
+                          </tr>
+                          <tr>
+                            <td><code>data-widget=&quot;card-widget&quot;</code></td>
+                            <td>
+                              <code>data-lte-toggle=&quot;card-collapse&quot;</code>,
+                              <code>card-remove</code>, <code>card-maximize</code>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td><code>data-widget=&quot;fullscreen&quot;</code></td>
+                            <td><code>data-lte-toggle=&quot;fullscreen&quot;</code></td>
+                          </tr>
+                          <tr>
+                            <td><code>data-widget=&quot;control-sidebar&quot;</code></td>
+                            <td>(dihapus — offcanvas Bootstrap menggantikan ini)</td>
+                          </tr>
+                          <tr>
+                            <td><code>.dark-mode</code> (pada <code>&lt;body&gt;</code>)</td>
+                            <td><code>data-bs-theme=&quot;dark&quot;</code> (pada elemen apa pun)</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <h5 id="bootstrap-4--5-utility-renames">Pengubahan nama utilitas Bootstrap 4 → 5</h5>
+                    <p>
+                      Ini berasal dari Bootstrap itu sendiri, bukan AdminLTE, tetapi memengaruhi setiap halaman:
+                    </p>
+                    <div class="table-responsive" tabindex="0">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Bootstrap 4</th>
+                            <th>Bootstrap 5</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td><code>data-toggle</code></td>
+                            <td><code>data-bs-toggle</code></td>
+                          </tr>
+                          <tr>
+                            <td><code>data-target</code></td>
+                            <td><code>data-bs-target</code></td>
+                          </tr>
+                          <tr>
+                            <td><code>data-dismiss</code></td>
+                            <td><code>data-bs-dismiss</code></td>
+                          </tr>
+                          <tr>
+                            <td><code>data-parent</code></td>
+                            <td><code>data-bs-parent</code></td>
+                          </tr>
+                          <tr>
+                            <td><code>data-spy</code></td>
+                            <td><code>data-bs-spy</code></td>
+                          </tr>
+                          <tr>
+                            <td><code>data-ride</code></td>
+                            <td><code>data-bs-ride</code></td>
+                          </tr>
+                          <tr>
+                            <td><code>.ml-*</code>, <code>.mr-*</code></td>
+                            <td><code>.ms-*</code>, <code>.me-*</code></td>
+                          </tr>
+                          <tr>
+                            <td><code>.pl-*</code>, <code>.pr-*</code></td>
+                            <td><code>.ps-*</code>, <code>.pe-*</code></td>
+                          </tr>
+                          <tr>
+                            <td><code>.float-left</code>, <code>.float-right</code></td>
+                            <td><code>.float-start</code>, <code>.float-end</code></td>
+                          </tr>
+                          <tr>
+                            <td><code>.text-left</code>, <code>.text-right</code></td>
+                            <td><code>.text-start</code>, <code>.text-end</code></td>
+                          </tr>
+                          <tr>
+                            <td><code>.border-left</code>, <code>.border-right</code></td>
+                            <td><code>.border-start</code>, <code>.border-end</code></td>
+                          </tr>
+                          <tr>
+                            <td><code>.rounded-left</code>, <code>.rounded-right</code></td>
+                            <td><code>.rounded-start</code>, <code>.rounded-end</code></td>
+                          </tr>
+                          <tr>
+                            <td><code>.font-weight-*</code></td>
+                            <td><code>.fw-*</code></td>
+                          </tr>
+                          <tr>
+                            <td><code>.font-italic</code></td>
+                            <td><code>.fst-italic</code></td>
+                          </tr>
+                          <tr>
+                            <td><code>.text-monospace</code></td>
+                            <td><code>.font-monospace</code></td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <p>
+                      Cari-ganti regex menangani sebagian besar ini dalam beberapa menit. Alat migrasi <a href="https://github.com/dbtek/bootstrap-5-migration"
+                        ><code>bootstrap-5-migration</code></a
+                      > mengotomatiskan sebagian besarnya.
+                    </p>
+                    <h5 id="jquery-removal">Penghapusan jQuery</h5>
+                    <p>
+                      Jika kode aplikasi Anda memanggil plugin AdminLTE 3 melalui jQuery (<code>$(&#39;.sidebar&#39;).PushMenu()</code>, dll.), pemanggilan tersebut tidak lagi berfungsi. Penggantinya:
+                    </p>
+                    <pre
+                      class="astro-code dark-plus"
+                      style="background-color: #1e1e1e; color: #d4d4d4; overflow-x: auto"
+                      tabindex="0"
+                      data-language="js"
+                    ><code><span class="line"><span style="color:#6A9955">// AdminLTE 3</span></span>
+<span class="line"><span style="color:#DCDCAA">$</span><span style="color:#D4D4D4">(</span><span style="color:#CE9178">&#39;.sidebar-toggle&#39;</span><span style="color:#D4D4D4">).</span><span style="color:#DCDCAA">on</span><span style="color:#D4D4D4">(</span><span style="color:#CE9178">&#39;click&#39;</span><span style="color:#D4D4D4">, </span><span style="color:#569CD6">function</span><span style="color:#D4D4D4"> () {</span></span>
+<span class="line"><span style="color:#DCDCAA">  $</span><span style="color:#D4D4D4">(</span><span style="color:#CE9178">&#39;body&#39;</span><span style="color:#D4D4D4">).</span><span style="color:#DCDCAA">toggleClass</span><span style="color:#D4D4D4">(</span><span style="color:#CE9178">&#39;sidebar-collapse&#39;</span><span style="color:#D4D4D4">)</span></span>
+<span class="line"><span style="color:#D4D4D4">})</span></span></code></pre>
+                    <pre
+                      class="astro-code dark-plus"
+                      style="background-color: #1e1e1e; color: #d4d4d4; overflow-x: auto"
+                      tabindex="0"
+                      data-language="js"
+                    ><code><span class="line"><span style="color:#6A9955">// AdminLTE 4 — the data-API does this for you</span></span>
+<span class="line"><span style="color:#6A9955">// &lt;a href=&quot;#&quot; data-lte-toggle=&quot;sidebar&quot;&gt;...&lt;/a&gt;</span></span></code></pre>
+                    <p>Jika Anda memerlukan kontrol terprogram, impor kelas plugin secara langsung:</p>
+                    <pre
+                      class="astro-code dark-plus"
+                      style="background-color: #1e1e1e; color: #d4d4d4; overflow-x: auto"
+                      tabindex="0"
+                      data-language="js"
+                    ><code><span class="line"><span style="color:#C586C0">import</span><span style="color:#D4D4D4"> { </span><span style="color:#9CDCFE">PushMenu</span><span style="color:#D4D4D4"> } </span><span style="color:#C586C0">from</span><span style="color:#CE9178"> &quot;admin-lte&quot;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#569CD6">new</span><span style="color:#DCDCAA"> PushMenu</span><span style="color:#D4D4D4">(</span><span style="color:#9CDCFE">document</span><span style="color:#D4D4D4">.</span><span style="color:#DCDCAA">querySelector</span><span style="color:#D4D4D4">(</span><span style="color:#CE9178">&quot;.sidebar-toggle&quot;</span><span style="color:#D4D4D4">)).</span><span style="color:#DCDCAA">toggle</span><span style="color:#D4D4D4">()</span></span></code></pre>
+                    <p>
+                      Ketujuh plugin JS (<code>Layout</code>, <code>CardWidget</code>, <code>Treeview</code>, <code>DirectChat</code>, <code>FullScreen</code>, <code>PushMenu</code>, ditambah <code>initAccessibility</code>) diekspor dari <code>admin-lte</code>.
+                    </p>
+                    <h5 id="third-party-plugin-replacements">Pengganti plugin pihak ketiga</h5>
+                    <p>
+                      AdminLTE 3 membundel folder <code>plugins/</code> yang penuh dengan widget jQuery. AdminLTE 4 tidak menyertakan satu pun — ia tetap hanya berupa framework dan mendokumentasikan padanan vanilla-JS terbaik di kelasnya sebagai gantinya. Setiap pengganti di bawah ini berlisensi MIT, dipelihara secara aktif, dan tidak memerlukan jQuery:
+                    </p>
+                    <div class="table-responsive" tabindex="0">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Plugin AdminLTE 3 (jQuery)</th>
+                            <th>Pengganti AdminLTE 4</th>
+                            <th>Catatan</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td><a href="https://select2.org/">Select2</a></td>
+                            <td>
+                              <strong><a href="https://tom-select.js.org/">Tom Select</a></strong>
+                            </td>
+                            <td>
+                              Pencarian, pilihan ganda, penandaan, data jarak jauh, pengguliran virtual. Lihat <a href="../forms/advanced.html#select2">pemetaan API</a> dan <a href="integrations.html#coming-from-select2"
+                                >tema kompatibilitas Select2</a
+                              > jika Anda harus tetap menggunakan Select2.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <a href="https://www.virtuosoft.eu/code/bootstrap-duallistbox/"
+                                >Bootstrap4 Duallistbox</a
+                              >
+                            </td>
+                            <td>
+                              <strong><a href="https://tom-select.js.org/">Tom Select</a></strong>
+                            </td>
+                            <td>
+                              Tom Select <code>multiple</code> menangani tugas yang sama dengan UI yang lebih ringkas.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td><a href="https://datatables.net/">DataTables</a></td>
+                            <td>
+                              <strong><a href="https://tabulator.info/">Tabulator</a></strong>
+                            </td>
+                            <td>
+                              Pengurutan, penyaringan, paginasi, penyuntingan sebaris, ekspor. Digunakan di <code>tables/data.html</code>.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <a href="https://github.com/uxsolutions/bootstrap-datepicker"
+                                >bootstrap-datepicker</a
+                              >
+                            </td>
+                            <td>
+                              <strong><a href="https://flatpickr.js.org/">Flatpickr</a></strong>
+                            </td>
+                            <td>Satu pustaka menggantikan keempat plugin tanggal/waktu v3.</td>
+                          </tr>
+                          <tr>
+                            <td><a href="https://www.daterangepicker.com/">daterangepicker</a></td>
+                            <td>
+                              <strong><a href="https://flatpickr.js.org/">Flatpickr</a></strong> (<code>mode: &quot;range&quot;</code>)
+                            </td>
+                            <td></td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <a href="https://github.com/jdewit/bootstrap-timepicker"
+                                >Bootstrap Timepicker</a
+                              >
+                            </td>
+                            <td>
+                              <strong><a href="https://flatpickr.js.org/">Flatpickr</a></strong> (<code>noCalendar: true</code>)
+                            </td>
+                            <td></td>
+                          </tr>
+                          <tr>
+                            <td><a href="https://getdatepicker.com/">tempusdominus</a></td>
+                            <td>
+                              <strong><a href="https://flatpickr.js.org/">Flatpickr</a></strong>
+                            </td>
+                            <td></td>
+                          </tr>
+                          <tr>
+                            <td><a href="https://summernote.org/">Summernote</a></td>
+                            <td>
+                              <strong><a href="https://quilljs.com/">Quill</a></strong>
+                            </td>
+                            <td>Tema snow + bubble didemokan di <code>forms/editors.html</code>.</td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <a
+                                href="https://github.com/bootstrap-wysiwyg/bootstrap3-wysihtml5-bower"
+                                >bootstrap4-wysihtml5</a
+                              >
+                            </td>
+                            <td>
+                              <strong><a href="https://quilljs.com/">Quill</a></strong>
+                            </td>
+                            <td></td>
+                          </tr>
+                          <tr>
+                            <td><a href="https://simplemde.com/">SimpleMDE</a></td>
+                            <td>
+                              <strong
+                                ><a href="https://github.com/Ionaru/easy-markdown-editor"
+                                  >EasyMDE</a
+                                ></strong
+                              >
+                            </td>
+                            <td>EasyMDE <em>adalah</em> fork SimpleMDE yang dipelihara — API sama.</td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <a href="https://github.com/seiyria/bootstrap-slider"
+                                >bootstrap-slider</a
+                              >
+                            </td>
+                            <td>
+                              <strong
+                                ><a href="https://refreshless.com/nouislider/"
+                                  >noUiSlider</a
+                                ></strong
+                              >
+                            </td>
+                            <td></td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <a href="https://github.com/bantikyan/icheck-bootstrap"
+                                >iCheck / icheck-bootstrap</a
+                              >
+                            </td>
+                            <td>
+                              <strong><code>.form-check</code> bawaan</strong>
+                            </td>
+                            <td>Kotak centang dan sakelar bawaan Bootstrap 5.3 tidak memerlukan plugin.</td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <a href="https://itsjavi.com/bootstrap-colorpicker/"
+                                >bootstrap-colorpicker</a
+                              >
+                            </td>
+                            <td>
+                              <strong><a href="https://github.com/Simonwep/pickr">Pickr</a></strong>
+                            </td>
+                            <td>
+                              Atau <code
+                                >&lt;input type=&quot;color&quot; class=&quot;form-control
+                                form-control-color&quot;&gt;</code
+                              > bawaan.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <a href="https://github.com/RobinHerbots/Inputmask"
+                                >jQuery InputMask</a
+                              >
+                            </td>
+                            <td>
+                              <strong><a href="https://imask.js.org/">IMask</a></strong>
+                            </td>
+                            <td></td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <a href="https://github.com/aterrien/jQuery-Knob">jQuery Knob</a>
+                            </td>
+                            <td>
+                              Donat <strong><a href="https://www.chartjs.org/">Chart.js 4</a></strong>
+                            </td>
+                            <td>
+                              Grafik donat dengan <code>circumference</code>/<code>cutout</code> dan label di tengah — lihat bilah radial di <code>charts/chartjs.html</code>.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <a href="https://www.vincentbroute.fr/mapael/">jQuery Mapael</a>
+                            </td>
+                            <td>
+                              <strong
+                                ><a href="https://github.com/themustafaomar/jsvectormap"
+                                  >jsVectorMap</a
+                                ></strong
+                              >
+                            </td>
+                            <td></td>
+                          </tr>
+                          <tr>
+                            <td><a href="https://jqueryui.com/sortable/">jQuery UI sortable</a></td>
+                            <td>
+                              <strong
+                                ><a href="https://sortablejs.github.io/Sortable/"
+                                  >SortableJS</a
+                                ></strong
+                              >
+                            </td>
+                            <td>Menggerakkan demo kanban.</td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <a href="https://fullcalendar.io/">fullCalendar</a> (build jQuery)
+                            </td>
+                            <td>
+                              <strong><a href="https://fullcalendar.io/">FullCalendar 7</a></strong>
+                            </td>
+                            <td>
+                              Proyek yang sama — v5+ menghapus jQuery. Digunakan di <code>pages/calendar.html</code>.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td><a href="https://www.chartjs.org/">Chart.js 2</a></td>
+                            <td>
+                              <strong><a href="https://www.chartjs.org/">Chart.js 4</a></strong>
+                            </td>
+                            <td>
+                              Chart.js tidak pernah berbasis jQuery; hanya pembaruan versi utama. Digunakan di dasbor dan <code>charts/chartjs.html</code>.
+                            </td>
+                          </tr>
+                          <tr>
+                            <td><a href="https://www.dropzone.dev/">dropzone</a></td>
+                            <td>
+                              <strong><a href="https://www.dropzone.dev/">Dropzone 6</a></strong> atau <strong><a href="https://pqina.nl/filepond/">FilePond</a></strong>
+                            </td>
+                            <td>v6 adalah penulisan ulang dengan JS polos.</td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <a href="https://github.com/ashleydw/lightbox">Ekko Lightbox</a>
+                            </td>
+                            <td>
+                              <strong
+                                ><a href="https://biati-digital.github.io/glightbox/"
+                                  >GLightbox</a
+                                ></strong
+                              >
+                            </td>
+                            <td></td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <a href="https://kingsora.github.io/OverlayScrollbars/"
+                                >jQuery Overlay Scrollbars</a
+                              >
+                            </td>
+                            <td>
+                              <strong>CSS <code>scrollbar-*</code> bawaan</strong>
+                            </td>
+                            <td>AdminLTE 4 menata bilah gulir sidebar menggunakan CSS.</td>
+                          </tr>
+                          <tr>
+                            <td>
+                              <a href="https://github.com/CodeSeven/toastr">toastr</a> / <a href="https://sweetalert2.github.io/">SweetAlert2</a>
+                            </td>
+                            <td>
+                              <strong
+                                ><a href="https://getbootstrap.com/docs/5.3/components/toasts/"
+                                  >Toast</a
+                                > Bootstrap</strong
+                              > / <strong
+                                ><a href="https://sweetalert2.github.io/">SweetAlert2</a></strong
+                              >
+                            </td>
+                            <td>SweetAlert2 sudah bebas jQuery sejak v7.</td>
+                          </tr>
+                          <tr>
+                            <td><a href="https://js-grid.com/">jsGrid</a></td>
+                            <td>
+                              <strong><a href="https://tabulator.info/">Tabulator</a></strong>
+                            </td>
+                            <td></td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <p>
+                      Cuplikan instalasi dan kode penghubung untuk setiap pengganti tersedia di halaman <a href="integrations.html">Integrasi yang Direkomendasikan</a>.
+                    </p>
+                    <h5 id="dark-mode">Mode gelap</h5>
+                    <p>
+                      AdminLTE 3 menggunakan kelas <code>.dark-mode</code> yang diubah-ubah pada <code>&lt;body&gt;</code>. AdminLTE 4 menggunakan atribut bawaan Bootstrap 5.3 yaitu <code>data-bs-theme=&quot;dark&quot;</code>, yang dapat diterapkan di tingkat mana pun — <code>&lt;html&gt;</code>, <code>&lt;body&gt;</code>, atau satu komponen.
+                    </p>
+                    <pre
+                      class="astro-code dark-plus"
+                      style="background-color: #1e1e1e; color: #d4d4d4; overflow-x: auto"
+                      tabindex="0"
+                      data-language="html"
+                    ><code><span class="line"><span style="color:#6A9955">&lt;!-- AdminLTE 3 --&gt;</span></span>
+<span class="line"><span style="color:#808080">&lt;</span><span style="color:#569CD6">body</span><span style="color:#9CDCFE"> class</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;dark-mode&quot;</span><span style="color:#808080">&gt;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955">&lt;!-- AdminLTE 4 --&gt;</span></span>
+<span class="line"><span style="color:#808080">&lt;</span><span style="color:#569CD6">html</span><span style="color:#9CDCFE"> data-bs-theme</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;dark&quot;</span><span style="color:#808080">&gt;</span></span></code></pre>
+                    <p>
+                      Widget <a href="color-mode.html">Mode Warna</a> yang disertakan membaca/menulis atribut ini dan menyimpan pilihan pengguna di <code>localStorage</code>. Lihat halaman dokumentasi <a href="color-mode.html">Mode Warna</a> untuk implementasi pengalihnya.
+                    </p>
+                    <h5 id="extra-colours-moved-to-an-opt-in-stylesheet">
+                      Warna tambahan dipindahkan ke stylesheet opt-in
+                    </h5>
+                    <p>
+                      AdminLTE 3 menyertakan banyak kelas warna sekali pakai (<code>.bg-navy</code>, <code>.bg-purple</code>, <code>.bg-fuchsia</code>, <code>.bg-gradient-*</code>, skin sidebar/navbar) di dalam CSS utamanya. Di v4, stylesheet inti hanya mengenali warna tema Bootstrap; palet yang diperluas adalah file opt-in terpisah, <code>dist/css/adminlte-colors.css</code>, dengan rangkaian empat belas warna yang dirancang ulang (semuanya mendukung teks putih pada rasio ≥ 4,5:1) dan keluarga kelas yang sama untuk masing-masing warna — <code>.bg-*</code>, <code>.text-bg-*</code>, <code>.bg-gradient-*</code>, <code>.card-*</code>, <code>.callout-*</code>, ….
+                    </p>
+                    <pre
+                      class="astro-code dark-plus"
+                      style="background-color: #1e1e1e; color: #d4d4d4; overflow-x: auto"
+                      tabindex="0"
+                      data-language="html"
+                    ><code><span class="line"><span style="color:#6A9955">&lt;!-- AdminLTE 3 --&gt;</span></span>
+<span class="line"><span style="color:#808080">&lt;</span><span style="color:#569CD6">div</span><span style="color:#9CDCFE"> class</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;card bg-navy&quot;</span><span style="color:#808080">&gt;</span><span style="color:#D4D4D4">…</span><span style="color:#808080">&lt;/</span><span style="color:#569CD6">div</span><span style="color:#808080">&gt;</span></span>
+<span class="line"><span style="color:#808080">&lt;</span><span style="color:#569CD6">aside</span><span style="color:#9CDCFE"> class</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;main-sidebar sidebar-dark-primary&quot;</span><span style="color:#808080">&gt;</span><span style="color:#D4D4D4">…</span><span style="color:#808080">&lt;/</span><span style="color:#569CD6">aside</span><span style="color:#808080">&gt;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955">&lt;!-- AdminLTE 4 — load css/adminlte-colors.css after adminlte.css --&gt;</span></span>
+<span class="line"><span style="color:#808080">&lt;</span><span style="color:#569CD6">div</span><span style="color:#9CDCFE"> class</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;card text-bg-navy&quot;</span><span style="color:#808080">&gt;</span><span style="color:#D4D4D4">…</span><span style="color:#808080">&lt;/</span><span style="color:#569CD6">div</span><span style="color:#808080">&gt;</span></span>
+<span class="line"><span style="color:#808080">&lt;</span><span style="color:#569CD6">aside</span><span style="color:#9CDCFE"> class</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;app-sidebar text-bg-navy shadow&quot;</span><span style="color:#9CDCFE"> data-bs-theme</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;dark&quot;</span><span style="color:#808080">&gt;</span><span style="color:#D4D4D4">…</span><span style="color:#808080">&lt;/</span><span style="color:#569CD6">aside</span><span style="color:#808080">&gt;</span></span></code></pre>
+                    <p>
+                      <code>lightblue</code> menjadi <code>sky</code> dan <code>maroon</code> menjadi <code>pink</code>; <code>$lte-palette-aliases</code> memulihkan nama-nama lama jika markup Anda bergantung padanya. Semua hal lainnya — palet, skin, menambahkan warna merek Anda — ada di halaman <a href="colors.html">Warna</a>. Untuk menata ulang tema warna bawaan Bootstrap, timpa <code>--bs-primary</code> dll. pada <code>:root</code>; lihat <a href="customization.html">Kustomisasi</a>.
+                    </p>
+                    <h5 id="icons">Ikon</h5>
+                    <p>
+                      Demo AdminLTE 3 menggunakan FontAwesome 6 gratis. AdminLTE 4 berstandar pada <a href="https://icons.getbootstrap.com/">Bootstrap Icons</a> — ikon-ikon tersebut berbentuk SVG, lebih ringan, berlisensi MIT, dan hadir bersama ekosistem Bootstrap.
+                    </p>
+                    <pre
+                      class="astro-code dark-plus"
+                      style="background-color: #1e1e1e; color: #d4d4d4; overflow-x: auto"
+                      tabindex="0"
+                      data-language="html"
+                    ><code><span class="line"><span style="color:#6A9955">&lt;!-- AdminLTE 3 --&gt;</span></span>
+<span class="line"><span style="color:#808080">&lt;</span><span style="color:#569CD6">i</span><span style="color:#9CDCFE"> class</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;fas fa-home&quot;</span><span style="color:#808080">&gt;&lt;/</span><span style="color:#569CD6">i</span><span style="color:#808080">&gt;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955">&lt;!-- AdminLTE 4 --&gt;</span></span>
+<span class="line"><span style="color:#808080">&lt;</span><span style="color:#569CD6">i</span><span style="color:#9CDCFE"> class</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;bi bi-house&quot;</span><span style="color:#808080">&gt;&lt;/</span><span style="color:#569CD6">i</span><span style="color:#808080">&gt;</span></span></code></pre>
+                    <p>
+                      Jika Anda lebih suka tetap menggunakan FontAwesome (atau menggunakan Lucide, Tabler Icons, Material Symbols, dll.), tidak ada di AdminLTE 4 yang memaksakan Bootstrap Icons — muat font ikon mana pun yang Anda sukai dan ganti kelas <code>&lt;i&gt;</code>. Lihat <a href="integrations.html#icon-libraries">Integrasi yang Direkomendasikan</a> untuk tabel perbandingan.
+                    </p>
+                    <h5 id="pages-we-havent-ported-yet">Halaman yang belum kami port</h5>
+                    <p>
+                      Demo v3 menyertakan halaman-halaman yang belum semuanya dibuat ulang untuk v4. Catatan rilis v4 mencakup katalog halaman saat ini. Jika Anda bergantung pada halaman v3 tertentu yang belum diport, silakan <a href="https://github.com/ColorlibHQ/AdminLTE/issues">buka issue</a> — kontribusi komunitas untuk halaman yang belum ada sangat kami sambut.
+                    </p>
+                    <h5 id="suggested-migration-order">Urutan migrasi yang disarankan</h5>
+                    <p>Untuk proyek AdminLTE 3 yang sudah ada:</p>
+                    <ol>
+                      <li>
+                        <strong>Buat branch terlebih dahulu.</strong> Ini bukan perubahan kecil — pertahankan <code>master</code> di v3 hingga v4 stabil.
+                      </li>
+                      <li>
+                        <strong>Perbarui nama kelas CSS</strong> dengan proses cari-ganti menggunakan tabel di atas. Sebagian besar tata letak akan terkompilasi tetapi tampak rusak hingga langkah 3.
+                      </li>
+                      <li>
+                        <strong
+                          >Perbarui <code>data-toggle</code> → <code>data-bs-toggle</code></strong
+                        > dll. di semua template Anda.
+                      </li>
+                      <li>
+                        <strong>Ganti kode pengalih <code>.dark-mode</code></strong> dengan penulisan atribut <code>data-bs-theme</code>.
+                      </li>
+                      <li>
+                        <strong>Audit pemanggilan jQuery.</strong> Hapus pemanggilan tersebut (gunakan data API) atau impor kelas plugin secara langsung.
+                      </li>
+                      <li>
+                        <strong>Ganti plugin pihak ketiga</strong> menggunakan <a href="#third-party-plugin-replacements">tabel pengganti</a> di atas. Lakukan satu widget per satu waktu — ini langkah yang paling lama, dan setiap penggantian dapat diuji secara terpisah.
+                      </li>
+                      <li>
+                        <strong>Uji breakpoint responsif</strong> — Bootstrap 5 menambahkan <code>xxl</code>. Jika Anda menggunakan utilitas khusus breakpoint, periksa kembali skala baru tersebut.
+                      </li>
+                      <li>
+                        <strong>Uji ulang tampilan cetak</strong> — seperti pada v3, pencetakan menghilangkan header, sidebar, dan footer serta memberikan lebar penuh kertas untuk konten; <code>data-lte-print=&quot;plain&quot;</code> menghilangkan target tautan yang dicetak dan garis tepi tombol untuk halaman yang dicetak sebagai dokumen, sedangkan <code>data-lte-print=&quot;app&quot;</code> mencetak seluruh tata letak. Jika Anda memiliki CSS cetak kustom, pastikan masih berfungsi.
+                      </li>
+                    </ol>
+                    <h5 id="help-and-discussion">Bantuan dan diskusi</h5>
+                    <ul>
+                      <li>
+                        Pertanyaan migrasi: <a href="https://github.com/ColorlibHQ/AdminLTE/discussions"
+                          >GitHub Discussions</a
+                        >
+                      </li>
+                      <li>
+                        Menemukan sesuatu yang terlewat? <a href="https://github.com/ColorlibHQ/AdminLTE/issues">Buka issue</a> dengan tag <code>migration</code>.
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+      <!--begin::Footer-->
+      <footer class="app-footer">
+        <!--begin::To the end-->
+        <div class="float-end d-none d-sm-inline">Apa pun yang Anda inginkan</div>
+        <!--end::To the end-->
+        <!--begin::Copyright-->
+        <strong>
+          Hak cipta &copy; 2014-2026&nbsp; <a href="https://adminlte.io" class="text-decoration-none">AdminLTE.io</a>.
+        </strong>
+        Hak cipta dilindungi undang-undang.
+        <!--end::Copyright-->
+      </footer>
+      <!--end::Footer-->
+    </div>
+    <!--begin::Third Party Plugin(OverlayScrollbars)-->
+    <script
+      src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.17.0/browser/overlayscrollbars.browser.es6.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <!--end::Third Party Plugin(OverlayScrollbars)--><!--begin::Required Plugin(popperjs for Bootstrap 5)-->
+    <script
+      src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <!--end::Required Plugin(popperjs for Bootstrap 5)--><!--begin::Required Plugin(Bootstrap 5)-->
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.9/dist/js/bootstrap.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <!--end::Required Plugin(Bootstrap 5)--><!--begin::Required Plugin(AdminLTE)-->
+    <script src="../js/adminlte.js"></script>
+    <!--end::Required Plugin(AdminLTE)-->
+    <!--begin::OverlayScrollbars Configure-->
+    <script>
+      const SELECTOR_SIDEBAR_WRAPPER = '.sidebar-wrapper';
+      const Default = {
+        scrollbarTheme: 'os-theme-light',
+        scrollbarAutoHide: 'leave',
+        scrollbarClickScroll: true,
+      };
+      document.addEventListener('DOMContentLoaded', function () {
+        const sidebarWrapper = document.querySelector(SELECTOR_SIDEBAR_WRAPPER);
+
+        // Disable OverlayScrollbars on mobile devices to prevent touch interference
+        const isMobile = window.innerWidth <= 992;
+
+        if (
+          sidebarWrapper &&
+          globalThis.OverlayScrollbarsGlobal?.OverlayScrollbars !== undefined &&
+          !isMobile
+        ) {
+          OverlayScrollbarsGlobal.OverlayScrollbars(sidebarWrapper, {
+            scrollbars: {
+              theme: Default.scrollbarTheme,
+              autoHide: Default.scrollbarAutoHide,
+              clickScroll: Default.scrollbarClickScroll,
+            },
+          });
+        }
+      });
+    </script>
+    <!--end::OverlayScrollbars Configure-->
+
+    <!--begin::Color Mode Toggle-->
+    <!-- The light/dark/auto switcher ships in adminlte.js as the ColorMode
+     module (since 4.1) — no page script needed. Only the no-flash snippet
+     in <head> stays inline, because it must run before first paint. -->
+    <!--end::Color Mode Toggle-->
+
+    <!--email_on-->
+  </body>
+</html>

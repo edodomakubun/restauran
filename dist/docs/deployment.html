@@ -1,0 +1,1145 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Deployment &amp; Performa | AdminLTE 4</title>
+
+    <!--begin::Theme Init (prevents flash of incorrect theme on load, #6043)-->
+    <script>
+      (() => {
+        'use strict';
+        const root = document.documentElement;
+
+        // Applications with their own theming opt out of AdminLTE's color mode
+        // entirely, here as well as in the bundle.
+        if (root.getAttribute('data-lte-color-mode') === 'off') {
+          return;
+        }
+
+        const STORAGE_KEY = 'lte-theme';
+        let stored = null;
+        try {
+          stored = localStorage.getItem(STORAGE_KEY);
+        } catch {
+          // localStorage may be unavailable (private mode, sandboxed iframe).
+        }
+        // Mirror the precedence in color-mode.ts: the visitor's stored choice
+        // wins, then a theme this page declared itself, then the OS preference.
+        const authored = root.getAttribute('data-bs-theme');
+        let resolved = 'light';
+        if (stored === 'dark' || stored === 'light') {
+          resolved = stored;
+        } else if (authored === 'dark' || authored === 'light') {
+          resolved = authored;
+        } else if (globalThis.matchMedia('(prefers-color-scheme: dark)').matches) {
+          resolved = 'dark';
+        }
+        root.setAttribute('data-bs-theme', resolved);
+        root.style.colorScheme = resolved;
+        // Flag values computed here, so the bundle does not mistake them for a
+        // theme the page declared and stop following the OS preference.
+        if (resolved !== authored) {
+          root.setAttribute('data-lte-theme-resolved', '');
+        }
+      })();
+    </script>
+    <!--end::Theme Init-->
+
+    <!--begin::Accessibility Meta Tags-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#007bff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1a1a1a" media="(prefers-color-scheme: dark)" />
+    <!--end::Accessibility Meta Tags-->
+
+    <!--begin::Primary Meta Tags-->
+    <meta name="title" content="Deployment &amp; Performa | AdminLTE 4" />
+    <meta name="author" content="ColorlibHQ" />
+    <meta
+      name="description"
+      content="AdminLTE adalah templat dasbor admin Bootstrap 5 gratis dengan hampir 50 halaman contoh, dibangun menggunakan vanilla JS dan dirancang dengan mengutamakan aksesibilitas."
+    />
+    <meta
+      name="keywords"
+      content="bootstrap 5, bootstrap, bootstrap 5 admin dashboard, bootstrap 5 dashboard, bootstrap 5 charts, bootstrap 5 calendar, bootstrap 5 datepicker, bootstrap 5 tables, bootstrap 5 datatable, vanilla js datatable, colorlibhq, colorlibhq dashboard, colorlibhq admin dashboard, accessible admin panel"
+    />
+    <!--end::Primary Meta Tags-->
+
+    <!--begin::Accessibility Features-->
+    <!-- Skip links will be dynamically added by accessibility.js -->
+    <meta name="supported-color-schemes" content="light dark" />
+    <link rel="preload" href="../css/adminlte.css" as="style" />
+    <!--end::Accessibility Features-->
+
+    <!--begin::Fonts-->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@fontsource/source-sans-3@5.3.1/index.css"
+      integrity="sha256-VzMk9RVNVApO0cXfOO7il3dD8OPyu0aDyyLDd8EEGk8="
+      crossorigin="anonymous"
+      media="print"
+      onload="this.media = 'all'"
+    />
+    <!--end::Fonts-->
+
+    <!--begin::Third Party Plugin(OverlayScrollbars)-->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.17.0/styles/overlayscrollbars.min.css"
+      crossorigin="anonymous"
+    />
+    <!--end::Third Party Plugin(OverlayScrollbars)-->
+
+    <!--begin::Third Party Plugin(Bootstrap Icons)-->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.2/font/bootstrap-icons.min.css"
+      crossorigin="anonymous"
+    />
+    <!--end::Third Party Plugin(Bootstrap Icons)-->
+
+    <!--begin::Required Plugin(AdminLTE)-->
+    <link rel="stylesheet" href="../css/adminlte.css" />
+    <!--end::Required Plugin(AdminLTE)-->
+    <link rel="stylesheet" href="../css/adminlte-docs.css" />
+
+    <!--email_off-->
+  </head>
+  <body class="layout-fixed sidebar-expand-lg bg-body-tertiary docs-page">
+    <div class="app-wrapper">
+      <!--begin::Header-->
+      <nav class="app-header navbar navbar-expand bg-body">
+        <!--begin::Container-->
+        <div class="container-fluid">
+          <!--begin::Start Navbar Links-->
+          <ul class="navbar-nav">
+            <li class="nav-item">
+              <a
+                class="nav-link"
+                data-lte-toggle="sidebar"
+                href="#"
+                role="button"
+                aria-label="Alihkan bilah sisi"
+              >
+                <i class="bi bi-list"></i>
+              </a>
+            </li>
+
+            <li class="nav-item d-none d-md-block">
+              <a href="../docs/introduction.html" class="nav-link"> <i class="bi bi-book me-1" aria-hidden="true"></i> Dokumentasi </a>
+            </li>
+            <li class="nav-item d-none d-md-block">
+              <a href="../index.html" class="nav-link"> <i class="bi bi-arrow-left me-1" aria-hidden="true"></i> Kembali ke pratinjau langsung </a>
+            </li>
+          </ul>
+          <!--end::Start Navbar Links-->
+
+          <!--begin::Navbar Search-->
+          <form
+            class="navbar-search d-none d-xl-block ms-3"
+            role="search"
+            action="../pages/search-results.html"
+          >
+            <label for="navbar-search-input" class="visually-hidden">Cari</label>
+            <div class="navbar-search-field">
+              <input
+                type="search"
+                id="navbar-search-input"
+                name="q"
+                class="form-control"
+                placeholder="Cari…"
+                autocomplete="off"
+              />
+              <button class="navbar-search-submit" type="submit" aria-label="Kirim pencarian">
+                <i class="bi bi-search" aria-hidden="true"></i>
+              </button>
+            </div>
+          </form>
+          <!--end::Navbar Search-->
+
+          <!--begin::End Navbar Links-->
+          <ul class="navbar-nav ms-auto">
+            <!--begin::Search (small screens: the field above is hidden, so link to the search page)-->
+            <li class="nav-item d-xl-none">
+              <a class="nav-link" href="../pages/search-results.html" aria-label="Cari">
+                <i class="bi bi-search" aria-hidden="true"></i>
+              </a>
+            </li>
+            <!--end::Search-->
+            <!--begin::Messages Dropdown Menu-->
+            <li class="nav-item dropdown">
+              <a
+                class="nav-link"
+                data-bs-toggle="dropdown"
+                href="#"
+                aria-label="Pesan: 3 belum dibaca"
+              >
+                <i class="bi bi-chat-text"></i>
+                <span class="navbar-badge badge text-bg-danger">3</span>
+              </a>
+              <div class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
+                <a href="#" class="dropdown-item">
+                  <!--begin::Message-->
+                  <div class="d-flex">
+                    <div class="flex-shrink-0">
+                      <img
+                        src="../assets/img/user1-128x128.jpg"
+                        alt=""
+                        class="img-size-50 rounded-circle me-3"
+                      />
+                    </div>
+                    <div class="flex-grow-1">
+                      <p class="dropdown-item-title">
+                        Brad Diesel <span class="float-end fs-7 text-danger"
+                          ><i class="bi bi-star-fill"></i
+                        ></span>
+                      </p>
+                      <p class="fs-7">Hubungi saya kapan saja Anda bisa...</p>
+                      <p class="fs-7 text-secondary">
+                        <i class="bi bi-clock-fill me-1"></i> 4 Jam Lalu
+                      </p>
+                    </div>
+                  </div>
+                  <!--end::Message-->
+                </a>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item">
+                  <!--begin::Message-->
+                  <div class="d-flex">
+                    <div class="flex-shrink-0">
+                      <img
+                        src="../assets/img/user8-128x128.jpg"
+                        alt=""
+                        class="img-size-50 rounded-circle me-3"
+                      />
+                    </div>
+                    <div class="flex-grow-1">
+                      <p class="dropdown-item-title">
+                        John Pierce <span class="float-end fs-7 text-secondary">
+                          <i class="bi bi-star-fill"></i>
+                        </span>
+                      </p>
+                      <p class="fs-7">Pesanmu sudah saya terima, bro</p>
+                      <p class="fs-7 text-secondary">
+                        <i class="bi bi-clock-fill me-1"></i> 4 Jam Lalu
+                      </p>
+                    </div>
+                  </div>
+                  <!--end::Message-->
+                </a>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item">
+                  <!--begin::Message-->
+                  <div class="d-flex">
+                    <div class="flex-shrink-0">
+                      <img
+                        src="../assets/img/user3-128x128.jpg"
+                        alt=""
+                        class="img-size-50 rounded-circle me-3"
+                      />
+                    </div>
+                    <div class="flex-grow-1">
+                      <p class="dropdown-item-title">
+                        Nora Silvester <span class="float-end fs-7 text-warning">
+                          <i class="bi bi-star-fill"></i>
+                        </span>
+                      </p>
+                      <p class="fs-7">Subjek ditulis di sini</p>
+                      <p class="fs-7 text-secondary">
+                        <i class="bi bi-clock-fill me-1"></i> 4 Jam Lalu
+                      </p>
+                    </div>
+                  </div>
+                  <!--end::Message-->
+                </a>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item dropdown-footer">Lihat Semua Pesan</a>
+              </div>
+            </li>
+            <!--end::Messages Dropdown Menu-->
+
+            <!--begin::Notifications Dropdown Menu-->
+            <li class="nav-item dropdown">
+              <a
+                class="nav-link"
+                data-bs-toggle="dropdown"
+                href="#"
+                aria-label="Notifikasi: 15 belum dibaca"
+              >
+                <i class="bi bi-bell-fill"></i>
+                <span class="navbar-badge badge text-bg-warning">15</span>
+              </a>
+              <div class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
+                <span class="dropdown-item dropdown-header">15 Notifikasi</span>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item">
+                  <i class="bi bi-envelope me-2"></i> 4 pesan baru <span class="float-end text-secondary fs-7">3 menit</span>
+                </a>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item">
+                  <i class="bi bi-people-fill me-2"></i> 8 permintaan pertemanan <span class="float-end text-secondary fs-7">12 jam</span>
+                </a>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item">
+                  <i class="bi bi-file-earmark-fill me-2"></i> 3 laporan baru <span class="float-end text-secondary fs-7">2 hari</span>
+                </a>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item dropdown-footer"> Lihat Semua Notifikasi </a>
+              </div>
+            </li>
+            <!--end::Notifications Dropdown Menu-->
+
+            <!--begin::Language Menu-->
+            <!-- Markup only: swapping the locale is the application's job. The docs
+           Recipes page shows how to wire this to a real locale switch. -->
+            <li class="nav-item dropdown">
+              <a
+                class="nav-link"
+                href="#"
+                id="language-menu"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                aria-label="Ubah bahasa, bahasa saat ini Bahasa Inggris"
+              >
+                <i class="bi bi-translate" aria-hidden="true"></i>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="language-menu">
+                <li>
+                  <a class="dropdown-item active" href="#" hreflang="en" aria-current="true"> Bahasa Inggris <i class="bi bi-check-lg ms-2" aria-hidden="true"></i> </a>
+                </li>
+                <li><a class="dropdown-item" href="#" hreflang="es">Español</a></li>
+                <li><a class="dropdown-item" href="#" hreflang="fr">Français</a></li>
+                <li><a class="dropdown-item" href="#" hreflang="de">Deutsch</a></li>
+                <li><a class="dropdown-item" href="#" hreflang="ar">العربية</a></li>
+              </ul>
+            </li>
+            <!--end::Language Menu-->
+
+            <!--begin::Fullscreen Toggle-->
+            <li class="nav-item">
+              <a
+                class="nav-link"
+                href="#"
+                data-lte-toggle="fullscreen"
+                aria-label="Alihkan layar penuh"
+              >
+                <i data-lte-icon="maximize" class="bi bi-arrows-fullscreen"></i>
+                <i data-lte-icon="minimize" class="bi bi-fullscreen-exit d-none"></i>
+              </a>
+            </li>
+            <!--end::Fullscreen Toggle-->
+
+            <!--begin::Color Mode Toggle (#6010)-->
+            <li class="nav-item dropdown">
+              <a
+                class="nav-link"
+                href="#"
+                id="bd-theme"
+                aria-label="Alihkan skema warna"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <i class="bi bi-sun-fill" data-lte-theme-icon="light"></i>
+                <i class="bi bi-moon-fill d-none" data-lte-theme-icon="dark"></i>
+                <i class="bi bi-circle-half d-none" data-lte-theme-icon="auto"></i>
+              </a>
+              <ul
+                class="dropdown-menu dropdown-menu-end"
+                aria-labelledby="bd-theme"
+                style="--bs-dropdown-min-width: 8rem"
+              >
+                <li>
+                  <button
+                    type="button"
+                    class="dropdown-item d-flex align-items-center"
+                    data-bs-theme-value="light"
+                    aria-pressed="false"
+                  >
+                    <i class="bi bi-sun-fill me-2"></i> Terang <i class="bi bi-check-lg ms-auto d-none"></i>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    class="dropdown-item d-flex align-items-center"
+                    data-bs-theme-value="dark"
+                    aria-pressed="false"
+                  >
+                    <i class="bi bi-moon-fill me-2"></i> Gelap <i class="bi bi-check-lg ms-auto d-none"></i>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    class="dropdown-item d-flex align-items-center active"
+                    data-bs-theme-value="auto"
+                    aria-pressed="true"
+                  >
+                    <i class="bi bi-circle-half me-2"></i> Otomatis <i class="bi bi-check-lg ms-auto d-none"></i>
+                  </button>
+                </li>
+              </ul>
+            </li>
+            <!--end::Color Mode Toggle-->
+
+            <!--begin::User Menu Dropdown-->
+            <li class="nav-item dropdown user-menu">
+              <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+                <img
+                  src="../assets/img/user2-160x160.jpg"
+                  class="user-image rounded-circle shadow"
+                  alt="Alexander Pierce"
+                /> <span class="d-none d-xl-inline">Alexander Pierce</span>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
+                <!--begin::User Image-->
+                <li class="user-header text-bg-primary">
+                  <img
+                    src="../assets/img/user2-160x160.jpg"
+                    class="rounded-circle shadow"
+                    alt="Alexander Pierce"
+                  />
+                  <p>
+                    Alexander Pierce - Pengembang Web <small>Anggota sejak Nov. 2023</small>
+                  </p>
+                </li>
+                <!--end::User Image-->
+                <!--begin::Menu Body-->
+                <li class="user-body">
+                  <!--begin::Row-->
+                  <div class="row">
+                    <div class="col-4 text-center">
+                      <a href="#">Pengikut</a>
+                    </div>
+                    <div class="col-4 text-center">
+                      <a href="#">Penjualan</a>
+                    </div>
+                    <div class="col-4 text-center">
+                      <a href="#">Teman</a>
+                    </div>
+                  </div>
+                  <!--end::Row-->
+                </li>
+                <!--end::Menu Body-->
+                <!--begin::Menu Footer-->
+                <li class="user-footer">
+                  <a href="#" class="btn btn-outline-secondary">Profil</a> <a href="#" class="btn btn-outline-danger float-end">Keluar</a>
+                </li>
+                <!--end::Menu Footer-->
+              </ul>
+            </li>
+            <!--end::User Menu Dropdown-->
+          </ul>
+          <!--end::End Navbar Links-->
+        </div>
+        <!--end::Container-->
+      </nav>
+      <!--end::Header-->
+      <!--begin::Sidebar (docs mode)-->
+      <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
+        <!--begin::Sidebar Brand-->
+        <div class="sidebar-brand">
+          <a href="../docs/introduction.html" class="brand-link"> <img
+              src="../assets/img/AdminLTELogo.png"
+              alt="Logo AdminLTE"
+              class="brand-image opacity-75 shadow"
+            /> <span class="brand-text fw-light"> AdminLTE 4 <span class="opacity-75">&middot; Dokumentasi</span> </span> </a>
+        </div>
+        <!--end::Sidebar Brand-->
+        <!--begin::Sidebar Search-->
+        <div class="sidebar-search" role="search">
+          <label for="sidebar-search-input" class="visually-hidden">Filter dokumentasi</label>
+          <input
+            type="search"
+            id="sidebar-search-input"
+            class="form-control form-control-sm"
+            placeholder="Filter dokumentasi…"
+            autocomplete="off"
+            data-lte-toggle="sidebar-search"
+            data-lte-target="#docs-navigation"
+          />
+          <p class="fs-7 text-secondary mt-2 mb-0" data-lte-search-empty role="status" hidden>
+            Tidak ada halaman yang cocok.
+          </p>
+        </div>
+        <!--end::Sidebar Search-->
+        <!--begin::Sidebar Wrapper-->
+        <div class="sidebar-wrapper">
+          <nav class="mt-2" aria-label="Navigasi dokumentasi">
+            <!--begin::Sidebar Menu-->
+            <ul
+              class="nav sidebar-menu flex-column"
+              data-lte-toggle="treeview"
+              data-accordion="false"
+              id="docs-navigation"
+            >
+              <li class="nav-header">MULAI DI SINI</li>
+              <li class="nav-item">
+                <a href="../docs/introduction.html" class="nav-link">
+                  <i class="nav-icon bi bi-download"></i>
+                  <p>Instalasi</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="../docs/getting-started.html" class="nav-link">
+                  <i class="nav-icon bi bi-rocket-takeoff"></i>
+                  <p>Memulai</p>
+                </a>
+              </li>
+
+              <li class="nav-header">DASAR-DASAR</li>
+              <li class="nav-item">
+                <a href="../docs/layout.html" class="nav-link">
+                  <i class="nav-icon bi bi-grip-horizontal"></i>
+                  <p>Kelas Tata Letak</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="../docs/layout-blueprint.html" class="nav-link">
+                  <i class="nav-icon bi bi-diagram-3"></i>
+                  <p>Cetak Biru Tata Letak</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="../docs/customization.html" class="nav-link">
+                  <i class="nav-icon bi bi-palette"></i>
+                  <p>Kustomisasi</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="../docs/color-mode.html" class="nav-link">
+                  <i class="nav-icon bi bi-star-half"></i>
+                  <p>Mode Warna</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="../docs/colors.html" class="nav-link">
+                  <i class="nav-icon bi bi-palette"></i>
+                  <p>Warna</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="../docs/rtl.html" class="nav-link">
+                  <i class="nav-icon bi bi-text-paragraph"></i>
+                  <p>Dukungan RTL</p>
+                </a>
+              </li>
+
+              <li class="nav-header">MEMBANGUN</li>
+              <li class="nav-item">
+                <a href="../docs/recipes.html" class="nav-link">
+                  <i class="nav-icon bi bi-clipboard-check"></i>
+                  <p>Panduan Praktis</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="#" class="nav-link">
+                  <i class="nav-icon bi bi-ui-checks-grid"></i>
+                  <p>
+                    Komponen <i class="nav-arrow bi bi-chevron-right"></i>
+                  </p>
+                </a>
+                <ul class="nav nav-treeview">
+                  <li class="nav-item">
+                    <a href="../docs/components/main-header.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>Header Utama</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="../docs/components/main-sidebar.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>Sidebar Utama</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="../docs/components/card.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>Kartu</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="../docs/components/miscellaneous.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>Lain-lain</p>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="nav-item">
+                <a href="#" class="nav-link">
+                  <i class="nav-icon bi bi-filetype-js"></i>
+                  <p>
+                    Plugin JavaScript <i class="nav-arrow bi bi-chevron-right"></i>
+                  </p>
+                </a>
+                <ul class="nav nav-treeview">
+                  <li class="nav-item">
+                    <a href="../docs/javascript/plugins-overview.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>Ikhtisar</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="../docs/javascript/layout.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>Tata Letak</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="../docs/javascript/pushmenu.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>PushMenu</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="../docs/javascript/treeview.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>Treeview</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="../docs/javascript/card-widget.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>Card Widget</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="../docs/javascript/direct-chat.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>Direct Chat</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="../docs/javascript/fullscreen.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>Layar Penuh</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="../docs/javascript/sidebar-search.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>Pencarian Sidebar</p>
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="../docs/javascript/accessibility.html" class="nav-link">
+                      <i class="nav-icon bi bi-circle"></i>
+                      <p>Aksesibilitas</p>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <li class="nav-item">
+                <a href="../docs/integrations.html" class="nav-link">
+                  <i class="nav-icon bi bi-puzzle"></i>
+                  <p>Integrasi</p>
+                </a>
+              </li>
+
+              <li class="nav-header">RILIS</li>
+              <li class="nav-item">
+                <a href="../docs/migration.html" class="nav-link">
+                  <i class="nav-icon bi bi-arrow-up-right-square"></i>
+                  <p>Migrasi dari v3</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="../docs/deployment.html" class="nav-link active">
+                  <i class="nav-icon bi bi-cloud-upload"></i>
+                  <p>Deployment</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="../docs/browser-support.html" class="nav-link">
+                  <i class="nav-icon bi bi-browser-chrome"></i>
+                  <p>Dukungan Browser</p>
+                </a>
+              </li>
+
+              <li class="nav-header">SUMBER DAYA</li>
+              <li class="nav-item">
+                <a href="../docs/faq.html" class="nav-link">
+                  <i class="nav-icon bi bi-question-circle"></i>
+                  <p>FAQ</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="../docs/how-to-contribute.html" class="nav-link">
+                  <i class="nav-icon bi bi-people"></i>
+                  <p>Berkontribusi</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a href="../docs/license.html" class="nav-link">
+                  <i class="nav-icon bi bi-patch-check"></i>
+                  <p>Lisensi</p>
+                </a>
+              </li>
+              <li class="nav-item">
+                <a
+                  href="https://github.com/ColorlibHQ/AdminLTE"
+                  target="_blank"
+                  rel="noopener"
+                  class="nav-link"
+                >
+                  <i class="nav-icon bi bi-github"></i>
+                  <p>
+                    GitHub <i class="bi bi-box-arrow-up-right ms-1" aria-hidden="true"></i>
+                  </p>
+                </a>
+              </li>
+            </ul>
+            <!--end::Sidebar Menu-->
+
+            <!-- Back to preview CTA (bottom of sidebar) -->
+            <div class="p-3 mt-3 border-top border-secondary border-opacity-25">
+              <a
+                href="../index.html"
+                class="btn btn-sm btn-outline-light w-100 d-flex align-items-center justify-content-center gap-2"
+              > <i class="bi bi-arrow-left" aria-hidden="true"></i> Kembali ke pratinjau langsung </a>
+            </div>
+          </nav>
+        </div>
+        <!--end::Sidebar Wrapper-->
+      </aside>
+      <!--end::Sidebar (docs mode)-->
+      <main class="app-main">
+        <div class="app-content-header">
+          <div class="container-fluid">
+            <div class="row">
+              <div class="col-sm-6">
+                <h1 class="mb-0 fs-3">Deployment &amp; Performa</h1>
+              </div>
+              <div class="col-sm-6">
+                <nav aria-label="breadcrumb">
+                  <ol class="breadcrumb float-sm-end">
+                    <li class="breadcrumb-item"><a href="#">Dokumentasi</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Deployment</li>
+                  </ol>
+                </nav>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="app-content">
+          <div class="container-fluid">
+            <div class="row">
+              <div class="col-12">
+                <div class="card">
+                  <div class="card-body">
+                    <p>
+                      AdminLTE adalah templat HTML/CSS/JS statis — tidak ada hal rumit dalam men-deploy-nya. Namun ada beberapa pilihan yang secara signifikan memengaruhi bobot halaman, waktu hingga interaktif, dan keandalan CDN. Halaman ini mendokumentasikan hal-hal yang perlu diterapkan dengan tepat.
+                    </p>
+                    <h5 id="what-to-deploy">Yang perlu di-deploy</h5>
+                    <p>
+                      Artefak yang siap di-deploy adalah semua yang berada di bawah <code>dist/</code> ditambah templat HTML / render-server Anda sendiri:
+                    </p>
+                    <pre
+                      class="astro-code dark-plus"
+                      style="background-color: #1e1e1e; color: #d4d4d4; overflow-x: auto"
+                      tabindex="0"
+                      data-language="text"
+                    ><code><span class="line"><span>dist/</span></span>
+<span class="line"><span>├── css/                ← stylesheets (LTR + RTL, dev + minified)</span></span>
+<span class="line"><span>│   ├── adminlte.css</span></span>
+<span class="line"><span>│   ├── adminlte.min.css</span></span>
+<span class="line"><span>│   ├── adminlte.rtl.css</span></span>
+<span class="line"><span>│   └── adminlte.rtl.min.css</span></span>
+<span class="line"><span>├── js/                 ← JavaScript bundle (dev + minified)</span></span>
+<span class="line"><span>│   ├── adminlte.js</span></span>
+<span class="line"><span>│   └── adminlte.min.js</span></span>
+<span class="line"><span>└── assets/             ← demo images / fonts (replace with your own)</span></span></code></pre>
+                    <p>
+                      Anda tidak perlu menyertakan <code>src/</code>, <code>node_modules/</code>, atau HTML demo jika Anda menyematkan AdminLTE ke dalam aplikasi Anda sendiri.
+                    </p>
+                    <h5 id="always-use-the-min-variants-in-production">
+                      Selalu gunakan varian <code>.min</code> di lingkungan produksi
+                    </h5>
+                    <p>
+                      Build yang diminifikasi berisi kode yang sama dengan spasi kosong dihapus dan pengidentifikasi dipersingkat. Untuk <code>adminlte.css</code> penghematannya sekitar 15-20%; untuk <code>adminlte.js</code> lebih besar lagi (sekitar 30% setelah gzip). File non-minifikasi berguna saat pengembangan untuk debugging source-map yang mudah dibaca — jangan pernah sajikan ke pengguna.
+                    </p>
+                    <div class="table-responsive" tabindex="0">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Aset</th>
+                            <th>Pengembangan</th>
+                            <th>Produksi</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td>Stylesheet</td>
+                            <td><code>dist/css/adminlte.css</code></td>
+                            <td>
+                              <strong><code>dist/css/adminlte.min.css</code></strong>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>Skrip</td>
+                            <td><code>dist/js/adminlte.js</code></td>
+                            <td>
+                              <strong><code>dist/js/adminlte.min.js</code></strong>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>Stylesheet RTL</td>
+                            <td><code>dist/css/adminlte.rtl.css</code></td>
+                            <td>
+                              <strong><code>dist/css/adminlte.rtl.min.css</code></strong>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td>Tema Select2 <em>(opsional)</em></td>
+                            <td><code>dist/css/adminlte-select2.css</code></td>
+                            <td>
+                              <strong><code>dist/css/adminlte-select2.min.css</code></strong>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <p>
+                      <code>adminlte-select2.css</code> bersifat opsional dan hanya diperlukan jika aplikasi Anda memuat <a href="integrations.html#select2-compatibility-theme">Select2</a>; ini bukan bagian dari <code>adminlte.css</code>. <code>adminlte-docs.css</code> hanya menata halaman dokumentasi — jangan pernah menyertakannya saat rilis.
+                    </p>
+                    <h5 id="compression-at-the-edge">Kompresi di edge</h5>
+                    <p>
+                      Pastikan server web / CDN Anda mengaktifkan gzip (atau brotli) untuk jenis konten yang relevan:
+                    </p>
+                    <pre
+                      class="astro-code dark-plus"
+                      style="background-color: #1e1e1e; color: #d4d4d4; overflow-x: auto"
+                      tabindex="0"
+                      data-language="nginx"
+                    ><code><span class="line"><span style="color:#6A9955"># nginx</span></span>
+<span class="line"><span style="color:#569CD6">gzip on</span><span style="color:#D4D4D4">;</span></span>
+<span class="line"><span style="color:#569CD6">gzip_types </span><span style="color:#D4D4D4">text/css application/javascript text/html image/svg+xml;</span></span>
+<span class="line"><span style="color:#569CD6">gzip_comp_level </span><span style="color:#B5CEA8">6</span><span style="color:#D4D4D4">;</span></span></code></pre>
+                    <pre
+                      class="astro-code dark-plus"
+                      style="background-color: #1e1e1e; color: #d4d4d4; overflow-x: auto"
+                      tabindex="0"
+                      data-language="apache"
+                    ><code><span class="line"><span style="color:#6A9955"># Apache</span></span>
+<span class="line"><span style="color:#569CD6">AddOutputFilterByType</span><span style="color:#D4D4D4"> DEFLATE text/css application/javascript text/html image/svg+xml</span></span></code></pre>
+                    <p>
+                      Cloudflare, Vercel, Netlify, dan sebagian besar layanan hosting terkelola melakukan ini secara otomatis. Verifikasi dengan <code>curl -I -H &quot;Accept-Encoding: gzip&quot; your-page-url</code> dan cari <code>content-encoding: gzip</code> pada responsnya.
+                    </p>
+                    <h5 id="cache-headers">Header cache</h5>
+                    <p>
+                      Artefak dist hanya memiliki hash konten pada nama filenya <em>jika Anda mengaturnya melalui bundler Anda</em> — AdminLTE sendiri mendistribusikan nama file tetap. Dua strategi yang disarankan:
+                    </p>
+                    <ol>
+                      <li>
+                        <p>
+                          <strong>Cache singkat + string kueri versi</strong> (sederhana, berjalan tanpa alur build):
+                        </p>
+                        <pre
+                          class="astro-code dark-plus"
+                          style="background-color: #1e1e1e; color: #d4d4d4; overflow-x: auto"
+                          tabindex="0"
+                          data-language="html"
+                        ><code><span class="line"><span style="color:#808080">&lt;</span><span style="color:#569CD6">link</span><span style="color:#9CDCFE"> rel</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;stylesheet&quot;</span><span style="color:#9CDCFE"> href</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;/dist/css/adminlte.min.css?v=4.0.0&quot;</span><span style="color:#808080"> /&gt;</span></span>
+<span class="line"><span style="color:#808080">&lt;</span><span style="color:#569CD6">script</span><span style="color:#9CDCFE"> src</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;/dist/js/adminlte.min.js?v=4.0.0&quot;</span><span style="color:#808080">&gt;&lt;/</span><span style="color:#569CD6">script</span><span style="color:#808080">&gt;</span></span></code></pre>
+                        <p>
+                          Atur <code>Cache-Control: public, max-age=86400</code> (1 hari) di server. Naikkan <code>?v=</code> pada setiap rilis untuk memaksa pembaruan cache.
+                        </p>
+                      </li>
+                      <li>
+                        <p>
+                          <strong>Nama file dengan sidik jari hash</strong> (standar produksi, memerlukan bundler):
+                        </p>
+                        <p>
+                          Biarkan bundler Anda menghasilkan <code>adminlte.[hash].min.css</code> dan referensikan hash tersebut di HTML Anda. Atur <code>Cache-Control: public, max-age=31536000, immutable</code> (1 tahun). Ini adalah perilaku bawaan Vite/Webpack/Rollup jika Anda mengimpor AdminLTE melalui mereka.
+                        </p>
+                      </li>
+                    </ol>
+                    <h5 id="cdn-integrity-hashes">Hash integritas CDN</h5>
+                    <p>
+                      Jika Anda memuat AdminLTE dari CDN publik (jsDelivr, unpkg), sertakan hash Subresource Integrity (SRI) agar CDN yang disusupi tidak dapat menyajikan JavaScript berbahaya secara diam-diam:
+                    </p>
+                    <pre
+                      class="astro-code dark-plus"
+                      style="background-color: #1e1e1e; color: #d4d4d4; overflow-x: auto"
+                      tabindex="0"
+                      data-language="html"
+                    ><code><span class="line"><span style="color:#808080">&lt;</span><span style="color:#569CD6">link</span></span>
+<span class="line"><span style="color:#9CDCFE">  rel</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;stylesheet&quot;</span></span>
+<span class="line"><span style="color:#9CDCFE">  href</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;https://cdn.jsdelivr.net/npm/admin-lte@4.10.2/dist/css/adminlte.min.css&quot;</span></span>
+<span class="line"><span style="color:#9CDCFE">  integrity</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;sha384-PASTE_THE_HASH_HERE&quot;</span></span>
+<span class="line"><span style="color:#9CDCFE">  crossorigin</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;anonymous&quot;</span></span>
+<span class="line"><span style="color:#808080">/&gt;</span></span></code></pre>
+                    <p>
+                      Anda bisa mendapatkan hash dari <a href="https://www.jsdelivr.com/package/npm/admin-lte"
+                        >halaman detail file jsDelivr</a
+                      > — klik file mana saja dan salin baris “SRI”. Lakukan hal yang sama untuk Bootstrap, Popper, OverlayScrollbars, dan Bootstrap Icons.
+                    </p>
+                    <p>Untuk aset yang di-host secara privat, buat hash sendiri:</p>
+                    <pre
+                      class="astro-code dark-plus"
+                      style="background-color: #1e1e1e; color: #d4d4d4; overflow-x: auto"
+                      tabindex="0"
+                      data-language="bash"
+                    ><code><span class="line"><span style="color:#DCDCAA">openssl</span><span style="color:#CE9178"> dgst</span><span style="color:#569CD6"> -sha384</span><span style="color:#569CD6"> -binary</span><span style="color:#CE9178"> dist/css/adminlte.min.css</span><span style="color:#D4D4D4"> | </span><span style="color:#DCDCAA">openssl</span><span style="color:#CE9178"> base64</span><span style="color:#569CD6"> -A</span></span></code></pre>
+                    <h5 id="loading-order-matters">Urutan pemuatan sangat penting</h5>
+                    <p>Pastikan urutan skrip tepat atau fitur dapat gagal tanpa peringatan:</p>
+                    <pre
+                      class="astro-code dark-plus"
+                      style="background-color: #1e1e1e; color: #d4d4d4; overflow-x: auto"
+                      tabindex="0"
+                      data-language="html"
+                    ><code><span class="line"><span style="color:#808080">&lt;</span><span style="color:#569CD6">head</span><span style="color:#808080">&gt;</span></span>
+<span class="line"><span style="color:#6A9955">  &lt;!-- 1. Bootstrap Icons (font CSS) — load first so icons render with the page --&gt;</span></span>
+<span class="line"><span style="color:#808080">  &lt;</span><span style="color:#569CD6">link</span><span style="color:#9CDCFE"> rel</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;stylesheet&quot;</span><span style="color:#9CDCFE"> href</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.2/font/bootstrap-icons.min.css&quot;</span><span style="color:#808080"> /&gt;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955">  &lt;!-- 2. OverlayScrollbars (optional, for the sidebar scroller) --&gt;</span></span>
+<span class="line"><span style="color:#808080">  &lt;</span><span style="color:#569CD6">link</span><span style="color:#9CDCFE"> rel</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;stylesheet&quot;</span><span style="color:#9CDCFE"> href</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;https://cdn.jsdelivr.net/npm/overlayscrollbars@2.17.0/styles/overlayscrollbars.min.css&quot;</span><span style="color:#808080"> /&gt;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955">  &lt;!-- 3. AdminLTE — includes Bootstrap CSS via its imports --&gt;</span></span>
+<span class="line"><span style="color:#808080">  &lt;</span><span style="color:#569CD6">link</span><span style="color:#9CDCFE"> rel</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;stylesheet&quot;</span><span style="color:#9CDCFE"> href</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;https://cdn.jsdelivr.net/npm/admin-lte@4.10.2/dist/css/adminlte.min.css&quot;</span><span style="color:#808080"> /&gt;</span></span>
+<span class="line"><span style="color:#808080">&lt;/</span><span style="color:#569CD6">head</span><span style="color:#808080">&gt;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#808080">&lt;</span><span style="color:#569CD6">body</span><span style="color:#808080">&gt;</span></span>
+<span class="line"><span style="color:#D4D4D4">  …</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955">  &lt;!-- Scripts at the END of body --&gt;</span></span>
+<span class="line"><span style="color:#6A9955">  &lt;!-- 4. Popper (Bootstrap dependency for dropdowns/tooltips/popovers) --&gt;</span></span>
+<span class="line"><span style="color:#808080">  &lt;</span><span style="color:#569CD6">script</span><span style="color:#9CDCFE"> src</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js&quot;</span><span style="color:#808080">&gt;&lt;/</span><span style="color:#569CD6">script</span><span style="color:#808080">&gt;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955">  &lt;!-- 5. Bootstrap --&gt;</span></span>
+<span class="line"><span style="color:#808080">  &lt;</span><span style="color:#569CD6">script</span><span style="color:#9CDCFE"> src</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;https://cdn.jsdelivr.net/npm/bootstrap@5.3.9/dist/js/bootstrap.min.js&quot;</span><span style="color:#808080">&gt;&lt;/</span><span style="color:#569CD6">script</span><span style="color:#808080">&gt;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955">  &lt;!-- 6. OverlayScrollbars --&gt;</span></span>
+<span class="line"><span style="color:#808080">  &lt;</span><span style="color:#569CD6">script</span><span style="color:#9CDCFE"> src</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;https://cdn.jsdelivr.net/npm/overlayscrollbars@2.17.0/browser/overlayscrollbars.browser.es6.min.js&quot;</span><span style="color:#808080">&gt;&lt;/</span><span style="color:#569CD6">script</span><span style="color:#808080">&gt;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955">  &lt;!-- 7. AdminLTE — must load AFTER Bootstrap --&gt;</span></span>
+<span class="line"><span style="color:#808080">  &lt;</span><span style="color:#569CD6">script</span><span style="color:#9CDCFE"> src</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;https://cdn.jsdelivr.net/npm/admin-lte@4.10.2/dist/js/adminlte.min.js&quot;</span><span style="color:#808080">&gt;&lt;/</span><span style="color:#569CD6">script</span><span style="color:#808080">&gt;</span></span>
+<span class="line"><span style="color:#808080">&lt;/</span><span style="color:#569CD6">body</span><span style="color:#808080">&gt;</span></span></code></pre>
+                    <h5 id="defer-or-async">Defer atau async?</h5>
+                    <p>
+                      Bundel AdminLTE menunggu <code>DOMContentLoaded</code> sebelum menghubungkan API datanya, sehingga <code>defer</code> aman dan direkomendasikan:
+                    </p>
+                    <pre
+                      class="astro-code dark-plus"
+                      style="background-color: #1e1e1e; color: #d4d4d4; overflow-x: auto"
+                      tabindex="0"
+                      data-language="html"
+                    ><code><span class="line"><span style="color:#808080">&lt;</span><span style="color:#569CD6">script</span><span style="color:#9CDCFE"> defer</span><span style="color:#9CDCFE"> src</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;/dist/js/adminlte.min.js&quot;</span><span style="color:#808080">&gt;&lt;/</span><span style="color:#569CD6">script</span><span style="color:#808080">&gt;</span></span></code></pre>
+                    <p>
+                      Jangan gunakan <code>async</code> — skrip dapat dieksekusi sebelum dependensinya (Bootstrap, Popper) selesai diurai, dan listener akan terpasang pada elemen yang belum ada.
+                    </p>
+                    <h5 id="critical-css">CSS Kritis</h5>
+                    <p>
+                      Untuk first paint di bawah 1 detik, sisipkan secara inline gaya yang digunakan oleh tata letak above-the-fold (header + merek + konten pertama yang terlihat) dan muat sisa <code>adminlte.min.css</code> secara asinkron:
+                    </p>
+                    <pre
+                      class="astro-code dark-plus"
+                      style="background-color: #1e1e1e; color: #d4d4d4; overflow-x: auto"
+                      tabindex="0"
+                      data-language="html"
+                    ><code><span class="line"><span style="color:#808080">&lt;</span><span style="color:#569CD6">style</span><span style="color:#808080">&gt;</span><span style="color:#6A9955">/* extracted critical CSS for /dashboard */</span><span style="color:#808080">&lt;/</span><span style="color:#569CD6">style</span><span style="color:#808080">&gt;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#808080">&lt;</span><span style="color:#569CD6">link</span></span>
+<span class="line"><span style="color:#9CDCFE">  rel</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;preload&quot;</span></span>
+<span class="line"><span style="color:#9CDCFE">  as</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;style&quot;</span></span>
+<span class="line"><span style="color:#9CDCFE">  href</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;/dist/css/adminlte.min.css&quot;</span></span>
+<span class="line"><span style="color:#9CDCFE">  onload</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;</span><span style="color:#569CD6">this</span><span style="color:#CE9178">.</span><span style="color:#9CDCFE">onload</span><span style="color:#D4D4D4">=</span><span style="color:#569CD6">null</span><span style="color:#CE9178">;</span><span style="color:#569CD6">this</span><span style="color:#CE9178">.</span><span style="color:#9CDCFE">rel</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&#39;stylesheet&#39;&quot;</span></span>
+<span class="line"><span style="color:#808080">/&gt;</span></span>
+<span class="line"><span style="color:#808080">&lt;</span><span style="color:#569CD6">noscript</span><span style="color:#808080">&gt;&lt;</span><span style="color:#569CD6">link</span><span style="color:#9CDCFE"> rel</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;stylesheet&quot;</span><span style="color:#9CDCFE"> href</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;/dist/css/adminlte.min.css&quot;</span><span style="color:#808080"> /&gt;&lt;/</span><span style="color:#569CD6">noscript</span><span style="color:#808080">&gt;</span></span></code></pre>
+                    <p>
+                      Ekstrak CSS kritis dengan alat seperti <a href="https://github.com/GoogleChromeLabs/critters">Critters</a> atau <a href="https://github.com/pocketjoso/penthouse">Penthouse</a> sebagai bagian dari build Anda. Untuk dasbor di balik halaman login (di mana kecepatan muat pertama tidak sepenting halaman pemasaran), langkah ini biasanya berlebihan.
+                    </p>
+                    <h5 id="preload-key-assets">Pramuat aset utama</h5>
+                    <p>
+                      Kirim sumber daya penting ke browser sebelum ditemukan di HTML:
+                    </p>
+                    <pre
+                      class="astro-code dark-plus"
+                      style="background-color: #1e1e1e; color: #d4d4d4; overflow-x: auto"
+                      tabindex="0"
+                      data-language="html"
+                    ><code><span class="line"><span style="color:#808080">&lt;</span><span style="color:#569CD6">link</span><span style="color:#9CDCFE"> rel</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;preload&quot;</span><span style="color:#9CDCFE"> as</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;style&quot;</span><span style="color:#9CDCFE"> href</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;/dist/css/adminlte.min.css&quot;</span><span style="color:#808080"> /&gt;</span></span>
+<span class="line"><span style="color:#808080">&lt;</span><span style="color:#569CD6">link</span><span style="color:#9CDCFE"> rel</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;preload&quot;</span><span style="color:#9CDCFE"> as</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;font&quot;</span><span style="color:#9CDCFE"> href</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;/fonts/source-sans-3.woff2&quot;</span><span style="color:#9CDCFE"> type</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;font/woff2&quot;</span><span style="color:#9CDCFE"> crossorigin</span><span style="color:#808080"> /&gt;</span></span>
+<span class="line"><span style="color:#808080">&lt;</span><span style="color:#569CD6">link</span><span style="color:#9CDCFE"> rel</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;preconnect&quot;</span><span style="color:#9CDCFE"> href</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">&quot;https://cdn.jsdelivr.net&quot;</span><span style="color:#9CDCFE"> crossorigin</span><span style="color:#808080"> /&gt;</span></span></code></pre>
+                    <p>
+                      Hanya pramuat aset yang digunakan di setiap halaman. Mempramuat aset per rute dalam tata letak bersama hanya akan memboroskan bandwidth.
+                    </p>
+                    <h5 id="lazy-loading-sub-pages">Lazy-loading subhalaman</h5>
+                    <p>
+                      Jika dasbor Anda memiliki banyak rute dan JS berupa HTML yang dirender server per rute, utamakan impor CSS per rute daripada satu stylesheet raksasa. CSS inti AdminLTE berukuran kecil (~44KB setelah gzip), tetapi gaya khusus halaman (bagan, kalender, tabel) dapat menumpuk — muat hanya di halaman yang menggunakannya.
+                    </p>
+                    <p>Untuk SPA, lakukan code-splitting pada integrasi yang berat:</p>
+                    <pre
+                      class="astro-code dark-plus"
+                      style="background-color: #1e1e1e; color: #d4d4d4; overflow-x: auto"
+                      tabindex="0"
+                      data-language="js"
+                    ><code><span class="line"><span style="color:#6A9955">// Don&#39;t bundle the calendar app into the main chunk</span></span>
+<span class="line"><span style="color:#569CD6">const</span><span style="color:#DCDCAA"> Calendar</span><span style="color:#D4D4D4"> = () </span><span style="color:#569CD6">=&gt;</span><span style="color:#569CD6"> import</span><span style="color:#D4D4D4">(</span><span style="color:#CE9178">&quot;./Calendar.vue&quot;</span><span style="color:#D4D4D4">)</span></span></code></pre>
+                    <h5 id="bundle-size-budget">Anggaran ukuran bundel</h5>
+                    <p>Artefak <code>dist/</code> yang diterbitkan saat ini setelah di-gzip berukuran:</p>
+                    <div class="table-responsive" tabindex="0">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Aset</th>
+                            <th>Ukuran (gzip)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td><code>adminlte.min.css</code></td>
+                            <td>~40 KB</td>
+                          </tr>
+                          <tr>
+                            <td><code>adminlte.rtl.min.css</code></td>
+                            <td>~40 KB</td>
+                          </tr>
+                          <tr>
+                            <td><code>adminlte.min.js</code></td>
+                            <td>~5 KB</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <p>
+                      Total payload halaman pertama (HTML + Bootstrap + AdminLTE + Bootstrap Icons + Popper + OverlayScrollbars) sekitar <strong>180 KB setelah gzip</strong> saat dimuat dari CDN. Build CI menerapkan pemeriksaan <code>bundlewatch</code> yang akan gagal jika ada aset yang melebihi anggarannya.
+                    </p>
+                    <h5 id="service-workers--offline-support">Service worker / dukungan luring</h5>
+                    <p>
+                      AdminLTE hanyalah file statis — menyimpannya dalam cache service worker dapat langsung berjalan tanpa perubahan. Konfigurasi Workbox minimal:
+                    </p>
+                    <pre
+                      class="astro-code dark-plus"
+                      style="background-color: #1e1e1e; color: #d4d4d4; overflow-x: auto"
+                      tabindex="0"
+                      data-language="js"
+                    ><code><span class="line"><span style="color:#C586C0">import</span><span style="color:#D4D4D4"> { </span><span style="color:#9CDCFE">precacheAndRoute</span><span style="color:#D4D4D4"> } </span><span style="color:#C586C0">from</span><span style="color:#CE9178"> &quot;workbox-precaching&quot;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#DCDCAA">precacheAndRoute</span><span style="color:#D4D4D4">([</span></span>
+<span class="line"><span style="color:#D4D4D4">  { </span><span style="color:#9CDCFE">url:</span><span style="color:#CE9178"> &quot;/dist/css/adminlte.min.css&quot;</span><span style="color:#D4D4D4">, </span><span style="color:#9CDCFE">revision:</span><span style="color:#CE9178"> &quot;4.0.0&quot;</span><span style="color:#D4D4D4"> },</span></span>
+<span class="line"><span style="color:#D4D4D4">  { </span><span style="color:#9CDCFE">url:</span><span style="color:#CE9178"> &quot;/dist/js/adminlte.min.js&quot;</span><span style="color:#D4D4D4">, </span><span style="color:#9CDCFE">revision:</span><span style="color:#CE9178"> &quot;4.0.0&quot;</span><span style="color:#D4D4D4"> },</span></span>
+<span class="line"><span style="color:#6A9955">  // ...your own pages</span></span>
+<span class="line"><span style="color:#D4D4D4">])</span></span></code></pre>
+                    <h5 id="removing-dev-only-files-before-deploy">
+                      Menghapus file khusus pengembangan sebelum deploy
+                    </h5>
+                    <p>
+                      Jika Anda men-deploy folder demo <code>dist/</code> apa adanya, hapus pola-pola berikut dari unggahan:
+                    </p>
+                    <ul>
+                      <li>
+                        <code>*.map</code> (source map — membocorkan kode sumber ke siapa saja yang membuka devtools)
+                      </li>
+                      <li><code>**/html/</code> (build perantara Astro, jika ada)</li>
+                      <li><code>**/.astro/</code> (cache Astro)</li>
+                    </ul>
+                    <p>Untuk <code>rclone</code> / <code>rsync</code>:</p>
+                    <pre
+                      class="astro-code dark-plus"
+                      style="background-color: #1e1e1e; color: #d4d4d4; overflow-x: auto"
+                      tabindex="0"
+                      data-language="bash"
+                    ><code><span class="line"><span style="color:#DCDCAA">rsync</span><span style="color:#569CD6"> -avz</span><span style="color:#569CD6"> --delete</span><span style="color:#D7BA7D"> \</span></span>
+<span class="line"><span style="color:#569CD6">  --exclude=</span><span style="color:#CE9178">&#39;*.map&#39;</span><span style="color:#D7BA7D"> \</span></span>
+<span class="line"><span style="color:#569CD6">  --exclude=</span><span style="color:#CE9178">&#39;html/&#39;</span><span style="color:#D7BA7D"> \</span></span>
+<span class="line"><span style="color:#569CD6">  --exclude=</span><span style="color:#CE9178">&#39;.astro/&#39;</span><span style="color:#D7BA7D"> \</span></span>
+<span class="line"><span style="color:#CE9178">  dist/</span><span style="color:#CE9178"> user@server:/var/www/your-app/</span></span></code></pre>
+                    <h5 id="a-note-on-cloudflare-cache">Catatan tentang cache Cloudflare</h5>
+                    <p>
+                      TTL Cache Browser default Cloudflare adalah 4 jam. Jika Anda merilis versi baru dan ingin pengguna langsung melihatnya, <a href="https://developers.cloudflare.com/cache/how-to/purge-cache/"
+                        >bersihkan (purge) path yang terdampak</a
+                      > dari dasbor atau API Cloudflare. Jika tidak, pengguna pada halaman yang di-cache akan melihat CSS / JS lama Anda hingga empat jam.
+                    </p>
+                    <h5 id="where-to-next">Langkah selanjutnya</h5>
+                    <ul>
+                      <li>
+                        <a href="customization.html">Kustomisasi</a> — ubah warna, lebar sidebar, dan breakpoint sebelum Anda deploy
+                      </li>
+                      <li>
+                        <a href="integrations.html">Integrasi yang Direkomendasikan</a> — pilih pustaka ringan untuk fitur yang tidak dibundel oleh AdminLTE
+                      </li>
+                      <li>
+                        <a href="javascript/accessibility.html">Aksesibilitas</a> — pastikan halaman yang Anda deploy tetap menjaga jaminan a11y-nya
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+      <!--begin::Footer-->
+      <footer class="app-footer">
+        <!--begin::To the end-->
+        <div class="float-end d-none d-sm-inline">Apa pun yang Anda inginkan</div>
+        <!--end::To the end-->
+        <!--begin::Copyright-->
+        <strong>
+          Hak cipta &copy; 2014-2026&nbsp; <a href="https://adminlte.io" class="text-decoration-none">AdminLTE.io</a>.
+        </strong>
+        Hak cipta dilindungi undang-undang.
+        <!--end::Copyright-->
+      </footer>
+      <!--end::Footer-->
+    </div>
+    <!--begin::Third Party Plugin(OverlayScrollbars)-->
+    <script
+      src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.17.0/browser/overlayscrollbars.browser.es6.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <!--end::Third Party Plugin(OverlayScrollbars)--><!--begin::Required Plugin(popperjs for Bootstrap 5)-->
+    <script
+      src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <!--end::Required Plugin(popperjs for Bootstrap 5)--><!--begin::Required Plugin(Bootstrap 5)-->
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.9/dist/js/bootstrap.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <!--end::Required Plugin(Bootstrap 5)--><!--begin::Required Plugin(AdminLTE)-->
+    <script src="../js/adminlte.js"></script>
+    <!--end::Required Plugin(AdminLTE)-->
+    <!--begin::OverlayScrollbars Configure-->
+    <script>
+      const SELECTOR_SIDEBAR_WRAPPER = '.sidebar-wrapper';
+      const Default = {
+        scrollbarTheme: 'os-theme-light',
+        scrollbarAutoHide: 'leave',
+        scrollbarClickScroll: true,
+      };
+      document.addEventListener('DOMContentLoaded', function () {
+        const sidebarWrapper = document.querySelector(SELECTOR_SIDEBAR_WRAPPER);
+
+        // Disable OverlayScrollbars on mobile devices to prevent touch interference
+        const isMobile = window.innerWidth <= 992;
+
+        if (
+          sidebarWrapper &&
+          globalThis.OverlayScrollbarsGlobal?.OverlayScrollbars !== undefined &&
+          !isMobile
+        ) {
+          OverlayScrollbarsGlobal.OverlayScrollbars(sidebarWrapper, {
+            scrollbars: {
+              theme: Default.scrollbarTheme,
+              autoHide: Default.scrollbarAutoHide,
+              clickScroll: Default.scrollbarClickScroll,
+            },
+          });
+        }
+      });
+    </script>
+    <!--end::OverlayScrollbars Configure-->
+
+    <!--begin::Color Mode Toggle-->
+    <!-- The light/dark/auto switcher ships in adminlte.js as the ColorMode
+     module (since 4.1) — no page script needed. Only the no-flash snippet
+     in <head> stays inline, because it must run before first paint. -->
+    <!--end::Color Mode Toggle-->
+
+    <!--email_on-->
+  </body>
+</html>
