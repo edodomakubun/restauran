@@ -2,7 +2,7 @@
 <html lang="id">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Masuk | Sistem Restoran</title>
+    <title>Masuk | RestoOrder</title>
     <script>
       (() => {
         'use strict';
@@ -39,7 +39,8 @@
     <link rel="stylesheet" href="./css/adminlte.css" />
     <link rel="stylesheet" href="./css/restaurant.css" />
   </head>
-  <body class="login-page bg-body-secondary">
+  <body class="login-page">
+    <!-- Floating tools: fullscreen + theme switcher -->
     <div class="login-floating-tools">
       <button
         type="button"
@@ -69,36 +70,35 @@
       </div>
     </div>
 
-    <main class="login-box app-view-enter" style="width: 370px; max-width: 94vw;">
-      <div class="card card-outline card-primary shadow">
-        <div class="card-header text-center py-3">
-          <h1 class="h3 mb-0">
-            <i class="bi bi-shop-window text-primary me-2"></i><b>Resto</b>Order
-          </h1>
-        </div>
-        <div class="card-body login-card-body">
-          <p class="login-box-msg mb-3">Masuk menggunakan akun <strong>Admin</strong>, <strong>Kasir</strong>, atau <strong>Chef</strong></p>
+    <main class="login-box">
+      <!-- Branding -->
+      <div class="login-brand text-center mb-4">
+        <img src="./assets/img/app-icon.svg" width="52" height="52" alt="" class="login-brand-icon mb-2">
+        <h1 class="login-brand-name mb-0"><b>Resto</b>Order</h1>
+        <p class="login-brand-tagline text-secondary mb-0">Sistem Kasir Restoran</p>
+      </div>
 
+      <!-- Card form -->
+      <div class="card border-0 shadow-sm login-card">
+        <div class="card-body px-4 py-4">
           <div id="login-error" class="alert alert-danger py-2 d-none" role="alert"></div>
 
           <form id="login-form" novalidate>
-            <div class="input-group mb-3">
-              <div class="form-floating">
-                <input
-                  id="loginEmail"
-                  type="email"
-                  class="form-control"
-                  placeholder="nama@restoran.local"
-                  required
-                  autocomplete="username"
-                />
-                <label for="loginEmail">Email Staf</label>
-              </div>
-              <div class="input-group-text">
-                <span class="bi bi-envelope"></span>
-              </div>
+            <!-- Email -->
+            <div class="form-floating mb-3">
+              <input
+                id="loginEmail"
+                type="email"
+                class="form-control"
+                placeholder="nama@restoran.local"
+                required
+                autocomplete="username"
+              />
+              <label for="loginEmail"><i class="bi bi-envelope me-1"></i>Email Staf</label>
             </div>
-            <div class="input-group mb-3">
+
+            <!-- Password -->
+            <div class="login-pass-wrap mb-4">
               <div class="form-floating">
                 <input
                   id="loginPassword"
@@ -108,17 +108,18 @@
                   required
                   autocomplete="current-password"
                 />
-                <label for="loginPassword">Kata Sandi</label>
+                <label for="loginPassword"><i class="bi bi-lock me-1"></i>Kata Sandi</label>
               </div>
               <button
                 type="button"
                 id="toggle-pass"
-                class="input-group-text"
+                class="login-pass-toggle"
                 aria-label="Tampilkan atau sembunyikan kata sandi"
               >
                 <span class="bi bi-eye"></span>
               </button>
             </div>
+
             <div class="d-grid">
               <button id="login-submit" type="submit" class="btn btn-primary btn-lg">
                 <i class="bi bi-box-arrow-in-right me-1"></i> Masuk
@@ -126,6 +127,7 @@
             </div>
           </form>
 
+          <!-- Demo accounts — hanya tampil di mode lokal -->
           <div id="demo-accounts-box" class="mt-4 pt-3 border-top d-none">
             <p class="text-secondary small fw-semibold mb-2">
               <i class="bi bi-info-circle me-1"></i>Akun Uji Coba Mode Lokal (Klik untuk isi otomatis):
