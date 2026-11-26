@@ -23,6 +23,8 @@
           } else if (u.role !== 'admin' && u.role !== 'kasir') {
             root.classList.add('auth-pending');
             globalThis.location.replace('./chef.html');
+          } else if (sessionStorage.getItem('restoran_welcome_splash') === '1') {
+            root.classList.add('welcome-splash-active');
           }
         } catch {
           root.classList.add('auth-pending');
@@ -30,10 +32,10 @@
         }
       })();
     </script>
-    <style>html.auth-pending body{visibility:hidden}</style>
+    <style>html.auth-pending body{visibility:hidden}html.welcome-splash-active body>.app-wrapper{opacity:0!important}</style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
     <meta name="theme-color" content="#0d6efd" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./assets/img/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./assets/img/app-icon-192.png" />
@@ -67,6 +69,9 @@
               <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button" aria-label="Alihkan bilah sisi">
                 <i class="bi bi-list"></i>
               </a>
+            </li>
+            <li class="nav-item d-none d-md-block">
+              <a href="./daftar-pesanan.html" class="nav-link"><i class="bi bi-list-check me-1"></i>Daftar Pesanan</a>
             </li>
             <li class="nav-item d-none d-md-block">
               <a href="./chef.html" class="nav-link"><i class="bi bi-fire me-1"></i>Buka Layar Chef</a>
@@ -125,9 +130,12 @@
           <div class="container-fluid">
             <div class="row align-items-center">
               <div class="col-sm-6">
-                <h1 class="mb-0 fs-3">Kasir &amp; Pesanan</h1>
+                <h1 class="mb-0 fs-3">Buat Pesanan</h1>
               </div>
-              <div class="col-sm-6 text-sm-end mt-2 mt-sm-0">
+              <div class="col-sm-6 text-sm-end mt-2 mt-sm-0 d-flex flex-wrap gap-1 justify-content-sm-end">
+                <a href="./daftar-pesanan.html" class="btn btn-outline-primary btn-sm">
+                  <i class="bi bi-list-check me-1"></i> Daftar Pesanan
+                </a>
                 <a href="./chef.html" class="btn btn-outline-warning btn-sm">
                   <i class="bi bi-fire me-1"></i> Lihat Layar Chef
                 </a>
@@ -146,10 +154,21 @@
                     <h3 id="cart-title" class="card-title mb-0">
                       <i class="bi bi-bag-check me-1"></i> Pesanan Baru
                     </h3>
-                    <div class="d-flex align-items-center gap-2 ms-auto">
+                    <div class="card-tools d-flex align-items-center gap-2 ms-auto">
                       <span id="wz-cart-badge" class="badge text-bg-primary rounded-pill">0 item · Rp 0</span>
                       <button id="btn-cancel-edit" type="button" class="btn btn-xs btn-outline-secondary d-none">
                         Batal Edit
+                      </button>
+                      <button
+                        id="btn-toggle-wizard"
+                        type="button"
+                        class="btn btn-tool"
+                        data-lte-toggle="card-collapse"
+                        aria-label="Ciutkan atau perluas form pesanan"
+                        title="Ciutkan / Buka form pesanan"
+                      >
+                        <i data-lte-icon="expand" class="bi bi-plus-lg"></i>
+                        <i data-lte-icon="collapse" class="bi bi-dash-lg"></i>
                       </button>
                     </div>
                   </div>
@@ -159,47 +178,45 @@
                     </div>
 
                     <!-- Indikator Langkah Wizard -->
-                    <ol class="wizard-steps mb-2" id="wizard-steps">
+                    <ol class="wizard-steps mb-1" id="wizard-steps">
                       <li class="active" data-step="0">Pilih Menu</li>
                       <li data-step="1">Layanan &amp; Meja</li>
                       <li data-step="2">Tinjau &amp; Kirim</li>
                     </ol>
 
-                    <!-- Langkah 1: Pilih Menu Langsung + Form Manual Collapsible + Keranjang (tanpa .card bersarang) -->
+                    <!-- Langkah 1: Pilih Menu Langsung + Form Manual Collapsible + Keranjang (datar tanpa kotak/card bertingkat) -->
                     <fieldset class="wizard-step" data-step="0">
-                      <div class="row g-2">
+                      <div class="row g-3">
                         <div class="col-lg-8">
-                          <div class="border rounded bg-body p-2 mb-2">
-                            <div class="d-flex flex-column flex-sm-row gap-1 justify-content-between align-items-stretch align-items-sm-center pb-1 mb-2 border-bottom">
-                              <div class="d-flex flex-wrap gap-1" role="group" aria-label="Filter kategori menu">
-                                <button type="button" class="btn btn-xs btn-primary cat-filter" data-cat="all">Semua</button>
-                                <button type="button" class="btn btn-xs btn-outline-primary cat-filter" data-cat="makanan">
-                                  <i class="bi bi-egg-fried me-1"></i>Makanan
-                                </button>
-                                <button type="button" class="btn btn-xs btn-outline-primary cat-filter" data-cat="minuman">
-                                  <i class="bi bi-cup-straw me-1"></i>Minuman
-                                </button>
-                              </div>
-                              <div class="input-group input-group-sm w-100 w-sm-auto" style="min-width: 170px; max-width: 220px;">
-                                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                <input id="menu-search" type="search" class="form-control" placeholder="Cari menu..." />
-                              </div>
+                          <div class="d-flex flex-column flex-sm-row gap-1 justify-content-between align-items-stretch align-items-sm-center pb-1 mb-2 border-bottom">
+                            <div class="d-flex flex-wrap gap-1" role="group" aria-label="Filter kategori menu">
+                              <button type="button" class="btn btn-xs btn-primary cat-filter" data-cat="all">Semua</button>
+                              <button type="button" class="btn btn-xs btn-outline-primary cat-filter" data-cat="makanan">
+                                <i class="bi bi-egg-fried me-1"></i>Makanan
+                              </button>
+                              <button type="button" class="btn btn-xs btn-outline-primary cat-filter" data-cat="minuman">
+                                <i class="bi bi-cup-straw me-1"></i>Minuman
+                              </button>
                             </div>
-                            <div id="menu-grid" class="row g-1">
-                              <div class="col-12 text-center text-secondary small py-2">Memuat daftar menu...</div>
-                            </div>
-                            <div id="menu-pagination-footer" class="border-top pt-1 mt-2 d-none d-flex flex-wrap justify-content-between align-items-center gap-2">
-                              <span id="menu-page-info" class="small text-secondary"></span>
-                              <ul id="menu-pagination" class="pagination pagination-sm m-0"></ul>
+                            <div class="input-group input-group-sm w-100 w-sm-auto" style="min-width: 165px; max-width: 215px;">
+                              <span class="input-group-text"><i class="bi bi-search"></i></span>
+                              <input id="menu-search" type="search" class="form-control" placeholder="Cari menu..." />
                             </div>
                           </div>
+                          <div id="menu-grid" class="row g-1">
+                            <div class="col-12 text-center text-secondary small py-2">Memuat daftar menu...</div>
+                          </div>
+                          <div id="menu-pagination-footer" class="border-top pt-1 mt-2 d-none d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <span id="menu-page-info" class="small text-secondary"></span>
+                            <ul id="menu-pagination" class="pagination pagination-sm m-0"></ul>
+                          </div>
 
-                          <!-- Tulis Menu Manual / Kustom (Panel Bootstrap Collapse datar tanpa .card, default diciutkan) -->
-                          <div id="custom-menu-panel" class="border rounded bg-body-tertiary">
+                          <!-- Tulis Menu Manual / Kustom (datar, default diciutkan) -->
+                          <div id="custom-menu-panel" class="border-top pt-1 mt-2">
                             <button
                               id="btn-toggle-custom-menu"
                               type="button"
-                              class="btn btn-sm w-100 d-flex justify-content-between align-items-center text-start px-2 py-1 fw-semibold"
+                              class="btn btn-sm w-100 d-flex justify-content-between align-items-center text-start px-1 py-1 fw-semibold"
                               data-bs-toggle="collapse"
                               data-bs-target="#custom-menu-collapse"
                               aria-expanded="false"
@@ -208,7 +225,7 @@
                               <span><i class="bi bi-pencil-square me-1"></i> Tulis Menu Manual / Kustom</span>
                               <i id="custom-menu-chevron" class="bi bi-plus-lg"></i>
                             </button>
-                            <div id="custom-menu-collapse" class="collapse border-top px-2 py-2">
+                            <div id="custom-menu-collapse" class="collapse pt-2">
                               <form id="custom-item-form" class="row g-1 align-items-end">
                                 <div class="col-md-5">
                                   <label for="custom-name" class="form-label small mb-1">Nama Makanan / Minuman</label>
@@ -242,15 +259,15 @@
                           </div>
                         </div>
 
-                        <div class="col-lg-4">
-                          <div class="border rounded bg-body-tertiary p-2 h-100 d-flex flex-column">
+                        <div class="col-lg-4 border-top pt-2 pt-lg-0 border-top-lg-0">
+                          <div class="h-100 d-flex flex-column ps-lg-2">
                             <div class="d-flex justify-content-between align-items-center pb-1 mb-1 border-bottom">
                               <span class="fw-semibold small"><i class="bi bi-basket2 me-1 text-primary"></i>Menu Dipilih</span>
                               <button id="btn-clear-cart" type="button" class="btn btn-link btn-sm text-danger p-0 text-decoration-none">
                                 Kosongkan
                               </button>
                             </div>
-                            <div class="flex-grow-1">
+                            <div class="flex-grow-1 cart-scroll-area">
                               <div id="cart-items" class="list-group">
                                 <div class="list-group-item text-center text-secondary small py-2">
                                   Belum ada menu dipilih. Klik menu atau buka "Tulis Menu Manual".
@@ -292,6 +309,7 @@
                         <div id="table-number-wrap" class="col-md-6">
                           <label for="order-table" class="form-label small fw-semibold mb-1">Nomor Meja <span class="text-danger">*</span></label>
                           <input id="order-table" type="text" class="form-control form-control-sm" placeholder="Contoh: 05 atau VIP-1" />
+                          <div id="table-quick-chips" class="d-flex flex-wrap gap-1 mt-1"></div>
                           <div class="invalid-feedback">Nomor meja wajib diisi untuk layanan Makan di Tempat.</div>
                         </div>
                         <div class="col-md-6">
@@ -323,69 +341,6 @@
                 </div>
               </div>
             </div>
-
-            <!-- Daftar Pesanan Real-Time (CardWidget Collapsible AdminLTE 4) -->
-            <div class="row">
-              <div class="col-12">
-                <div id="orders-list-card" class="card card-outline card-primary">
-                  <div class="card-header d-flex justify-content-between align-items-center gap-2">
-                    <div class="d-flex flex-wrap align-items-center gap-2 min-w-0">
-                      <h3 class="card-title mb-0">
-                        <i class="bi bi-list-check me-1"></i> Daftar Pesanan <span class="d-none d-sm-inline">(Real-Time)</span>
-                      </h3>
-                      <span id="orders-count-badge" class="badge text-bg-primary rounded-pill">0</span>
-                      <span id="orders-ready-badge" class="badge text-bg-success rounded-pill d-none">0 Siap</span>
-                    </div>
-                    <div class="card-tools ms-auto flex-shrink-0">
-                      <button
-                        id="btn-toggle-orders"
-                        type="button"
-                        class="btn btn-tool"
-                        data-lte-toggle="card-collapse"
-                        aria-label="Ciutkan atau perluas daftar pesanan"
-                        title="Ciutkan / Buka daftar pesanan"
-                      >
-                        <i data-lte-icon="expand" class="bi bi-plus-lg"></i>
-                        <i data-lte-icon="collapse" class="bi bi-dash-lg"></i>
-                      </button>
-                    </div>
-                  </div>
-                  <div class="card-body p-0">
-                    <div class="p-2 p-md-3 border-bottom bg-body-tertiary d-flex flex-column flex-sm-row gap-2 justify-content-between align-items-stretch align-items-sm-center">
-                      <select id="orders-status-filter" class="form-select form-select-sm w-100 w-sm-auto">
-                        <option value="all">Semua Status</option>
-                        <option value="pending">Menunggu</option>
-                        <option value="cooking">Sedang Dimasak</option>
-                        <option value="ready">Siap Disajikan</option>
-                        <option value="completed">Selesai</option>
-                        <option value="cancelled">Dibatalkan</option>
-                      </select>
-                      <input id="orders-search" type="search" class="form-control form-control-sm w-100 w-sm-auto" placeholder="Cari kode / pembeli..." style="min-width: 180px;" />
-                    </div>
-                    <div id="orders-mobile-list" class="d-md-none p-2 d-flex flex-column gap-2"></div>
-                    <div class="table-responsive d-none d-md-block">
-                      <table class="table table-hover align-middle mb-0">
-                        <thead>
-                          <tr>
-                            <th>Kode &amp; Waktu</th>
-                            <th>Pemesan &amp; Layanan</th>
-                            <th>Makanan &amp; Minuman</th>
-                            <th>Total</th>
-                            <th>Status Dapur</th>
-                            <th class="text-end">Aksi</th>
-                          </tr>
-                        </thead>
-                        <tbody id="orders-table-body">
-                          <tr>
-                            <td colspan="6" class="text-center text-secondary py-4">Memuat daftar pesanan...</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </main>
@@ -396,47 +351,7 @@
       </footer>
     </div>
 
-    <div id="app-page-modals">
-      <!-- Modal Batalkan Pesanan -->
-      <div class="modal fade" id="cancelModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title text-warning"><i class="bi bi-exclamation-triangle me-1"></i> Batalkan Pesanan</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
-            </div>
-            <div class="modal-body">
-              <p class="mb-2">Anda akan membatalkan pesanan <strong id="cancel-modal-code"></strong>. Status akan langsung terlihat sebagai <strong>DIBATALKAN</strong> di Layar Chef.</p>
-              <label for="cancel-reason-input" class="form-label small fw-semibold">Alasan Pembatalan</label>
-              <input id="cancel-reason-input" type="text" class="form-control" placeholder="Misal: Pembeli mengganti pesanan / batal memesan" />
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
-              <button id="confirm-cancel-btn" type="button" class="btn btn-warning">Ya, Batalkan Pesanan</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Modal Hapus Permanen -->
-      <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title text-danger"><i class="bi bi-trash me-1"></i> Hapus Pesanan Permanen</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
-            </div>
-            <div class="modal-body">
-              <p class="mb-0">Hapus permanen pesanan <strong id="delete-modal-code"></strong>? Data akan dihapus dari basis data dan langsung hilang dari Layar Chef.</p>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-              <button id="confirm-delete-btn" type="button" class="btn btn-danger">Hapus Permanen</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <div id="app-page-modals"></div>
     <nav id="mobile-bottom-nav" class="mobile-bottom-nav d-lg-none" aria-label="Navigasi cepat aplikasi"></nav>
 
     <script src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.17.0/browser/overlayscrollbars.browser.es6.min.js" crossorigin="anonymous"></script>

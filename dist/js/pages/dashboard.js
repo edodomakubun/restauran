@@ -19,6 +19,7 @@ export function mount(ctx) {
     setBadge('set-del', s.kasirCanDeleteOrder);
     setBadge('set-edit', s.kasirCanEditWhileCooking);
     setBadge('set-cancel', s.kasirCanCancelWhileCooking);
+    setBadge('set-report', s.kasirCanViewReport);
   };
   renderSettings(session.settings);
 

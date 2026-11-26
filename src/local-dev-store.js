@@ -143,6 +143,7 @@ export const DEFAULT_SETTINGS = {
   kasirCanDeleteOrder: false,
   kasirCanEditWhileCooking: false,
   kasirCanCancelWhileCooking: false,
+  kasirCanViewReport: false,
   updatedAt: '2026-11-25T00:00:00.000Z',
 };
 
@@ -179,6 +180,17 @@ const DEFAULT_USERS = [
   },
 ];
 
+export const DEFAULT_TABLES = [
+  { id: 'tbl-01', number: '01', area: 'Utama', capacity: 4, status: 'available', note: '' },
+  { id: 'tbl-02', number: '02', area: 'Utama', capacity: 4, status: 'available', note: '' },
+  { id: 'tbl-03', number: '03', area: 'Utama', capacity: 4, status: 'available', note: '' },
+  { id: 'tbl-04', number: '04', area: 'Utama', capacity: 4, status: 'available', note: '' },
+  { id: 'tbl-05', number: '05', area: 'Utama', capacity: 6, status: 'available', note: '' },
+  { id: 'tbl-06', number: '06', area: 'Utama', capacity: 6, status: 'available', note: '' },
+  { id: 'tbl-vip1', number: 'VIP-1', area: 'VIP', capacity: 8, status: 'available', note: '' },
+  { id: 'tbl-vip2', number: 'VIP-2', area: 'VIP', capacity: 10, status: 'available', note: '' },
+];
+
 export function createLocalStore() {
   const now = new Date().toISOString();
   const state = {
@@ -187,6 +199,7 @@ export function createLocalStore() {
     settings: { ...DEFAULT_SETTINGS },
     users: DEFAULT_USERS.map((u) => ({ ...u })),
     menuItems: DEFAULT_MENU_ITEMS.map((m) => ({ ...m, createdAt: now, updatedAt: now })),
+    tables: DEFAULT_TABLES.map((t) => ({ ...t, createdAt: now, updatedAt: now })),
     orders: [],
   };
 
@@ -351,6 +364,57 @@ export function createLocalStore() {
       const idx = state.orders.findIndex((x) => x.id === id);
       if (idx === -1) return false;
       state.orders.splice(idx, 1);
+      bump();
+      return true;
+    },
+
+    deleteAllOrders() {
+      const count = state.orders.length;
+      state.orders.length = 0;
+      bump();
+      return count;
+    },
+
+    listTables() {
+      return state.tables
+        .map((t) => ({ ...t }))
+        .sort((a, b) => String(a.number).localeCompare(String(b.number), 'id', { numeric: true }));
+    },
+
+    createTable(table) {
+      const nowIso = new Date().toISOString();
+      const rec = {
+        id: `tbl-${crypto.randomUUID().slice(0, 8)}`,
+        number: table.number,
+        area: table.area || 'Utama',
+        capacity: Number(table.capacity || 4),
+        status: table.status || 'available',
+        note: table.note || '',
+        updatedBy: table.updatedBy || '',
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+      state.tables.push(rec);
+      bump();
+      return { ...rec };
+    },
+
+    updateTable(id, patch) {
+      const idx = state.tables.findIndex((t) => t.id === id);
+      if (idx === -1) return null;
+      state.tables[idx] = {
+        ...state.tables[idx],
+        ...patch,
+        updatedAt: new Date().toISOString(),
+      };
+      bump();
+      return { ...state.tables[idx] };
+    },
+
+    deleteTable(id) {
+      const idx = state.tables.findIndex((t) => t.id === id);
+      if (idx === -1) return false;
+      state.tables.splice(idx, 1);
       bump();
       return true;
     },

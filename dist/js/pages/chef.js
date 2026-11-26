@@ -1,7 +1,15 @@
 // Modul halaman Layar Chef / Kitchen Display System (chef.html)
 // Alur dapur: 1 tombol "Mulai Masak" per pesanan -> setelah diklik, setiap item menu makanan & minuman
 // memiliki tombol "Selesai Dimasak" / "Selesai Dibuat" masing-masing, disertai bungkus menu panjang + Modal Detail.
-import { apiFetch, el, formatElapsed, formatTimeShort, showToast, statusLabel } from '../app-client.js';
+import {
+  apiFetch,
+  applyOptimisticOrderPatch,
+  el,
+  formatElapsed,
+  formatTimeShort,
+  showToast,
+  statusLabel,
+} from '../app-client.js';
 
 const INLINE_LIMIT_PER_SECTION = 3;
 const INLINE_LIMIT_WHEN_LONG = 2;
@@ -56,6 +64,7 @@ export function mount(ctx) {
   let serviceFilter = 'all';
   let sectionFilter = 'all';
   let detailOrderId = null;
+  const inFlightKeys = new Set();
 
   const detailModalEl = document.getElementById('chefDetailModal');
   const detailModal = detailModalEl ? new globalThis.bootstrap.Modal(detailModalEl) : null;
@@ -67,15 +76,65 @@ export function mount(ctx) {
     { signal }
   );
 
-  async function updateOrderStatus(ord, payload, toastMsg) {
+  function deriveOptimisticOrder(ordCopy, payload) {
+    const nextStatus = payload.status;
+    const section = payload.section || 'all';
+    const hasIdx = payload.itemIndex !== undefined && payload.itemIndex !== null;
+    const items = Array.isArray(ordCopy.items) ? ordCopy.items : [];
+    const fallback = ordCopy.status || 'pending';
+
+    ordCopy.items = items.map((it, idx) => {
+      const curr = it.itemStatus || (it.category === 'makanan' ? ordCopy.foodStatus : ordCopy.drinkStatus) || fallback;
+      if (hasIdx) {
+        return idx === payload.itemIndex ? { ...it, itemStatus: nextStatus } : { ...it, itemStatus: curr };
+      }
+      const inSection =
+        section === 'all' ||
+        (section === 'food' && it.category === 'makanan') ||
+        (section === 'drink' && it.category === 'minuman');
+      if (!inSection) return { ...it, itemStatus: curr };
+      if (nextStatus === 'cooking' && (curr === 'ready' || curr === 'completed')) return { ...it, itemStatus: curr };
+      return { ...it, itemStatus: nextStatus };
+    });
+
+    const secStatus = (cat) => {
+      const grp = ordCopy.items.filter((i) => i.category === cat);
+      if (grp.length === 0) return 'none';
+      if (grp.every((i) => i.itemStatus === 'completed')) return 'completed';
+      if (grp.every((i) => i.itemStatus === 'ready' || i.itemStatus === 'completed')) return 'ready';
+      if (grp.some((i) => ['cooking', 'ready', 'completed'].includes(i.itemStatus))) return 'cooking';
+      return 'pending';
+    };
+
+    ordCopy.foodStatus = secStatus('makanan');
+    ordCopy.drinkStatus = secStatus('minuman');
+    const activeSecs = [ordCopy.foodStatus, ordCopy.drinkStatus].filter((s) => s !== 'none');
+    if (activeSecs.every((s) => s === 'completed')) ordCopy.status = 'completed';
+    else if (activeSecs.every((s) => s === 'ready' || s === 'completed')) ordCopy.status = 'ready';
+    else if (activeSecs.some((s) => ['cooking', 'ready', 'completed'].includes(s))) ordCopy.status = 'cooking';
+    else ordCopy.status = 'pending';
+    return ordCopy;
+  }
+
+  async function updateOrderStatus(ord, payload, toastMsg, triggerBtn = null) {
+    const lockKey = `${ord.id}:${payload.itemIndex ?? payload.section ?? 'all'}`;
+    if (inFlightKeys.has(lockKey)) return;
+    inFlightKeys.add(lockKey);
+    if (triggerBtn) triggerBtn.disabled = true;
+
+    const op = applyOptimisticOrderPatch(ord.id, (copy) => deriveOptimisticOrder(copy, payload));
     try {
-      await apiFetch(`/api/orders/${ord.id}/status`, {
+      const res = await apiFetch(`/api/orders/${ord.id}/status`, {
         method: 'PATCH',
         body: JSON.stringify(payload),
       });
+      op.commit(res?.order);
       showToast(toastMsg, 'success');
     } catch (err) {
+      op.rollback();
       showToast(err.message, 'danger');
+    } finally {
+      inFlightKeys.delete(lockKey);
     }
   }
 
@@ -105,11 +164,12 @@ export function mount(ctx) {
       {
         type: 'button',
         className: 'btn btn-xs btn-success fw-semibold flex-shrink-0 chef-item-done-btn',
-        onClick: () =>
+        onClick: (e) =>
           updateOrderStatus(
             ord,
             { status: 'ready', itemIndex: it.originalIndex },
-            `${it.name} (${ord.orderCode}) selesai ${isFood ? 'dimasak' : 'dibuat'}.`
+            `${it.name} (${ord.orderCode}) selesai ${isFood ? 'dimasak' : 'dibuat'}.`,
+            e.currentTarget
           ),
       },
       [el('i', { className: 'bi bi-check-lg me-1' }), isFood ? 'Selesai Dimasak' : 'Selesai Dibuat']
@@ -124,9 +184,9 @@ export function mount(ctx) {
     const stateCls = secStatus === 'ready' ? ' is-ready' : secStatus === 'completed' ? ' is-completed' : '';
     const readyCount = items.filter((i) => i.itemStatus === 'ready' || i.itemStatus === 'completed').length;
 
-    const box = el('div', { className: `chef-section-box${stateCls} mb-2` }, [
+    const box = el('div', { className: `chef-section-box${stateCls} mb-1` }, [
       el('div', { className: 'd-flex justify-content-between align-items-center gap-1 mb-1' }, [
-        el('div', { className: 'small text-uppercase fw-bold text-secondary' }, [
+        el('div', { className: 'small text-uppercase fw-bold text-secondary', style: 'font-size: 0.72rem;' }, [
           el('i', { className: `bi ${iconClass} me-1` }),
           `${title} (${readyCount}/${items.length})`,
         ]),
@@ -137,14 +197,14 @@ export function mount(ctx) {
         { className: 'list-group list-group-flush bg-transparent' },
         visibleItems.map((it) => {
           const isDone = it.itemStatus === 'ready' || it.itemStatus === 'completed';
-          return el('li', { className: 'list-group-item bg-transparent px-0 py-1 d-flex align-items-center gap-2' }, [
+          return el('li', { className: 'list-group-item bg-transparent px-0 py-1 d-flex align-items-center gap-1' }, [
             el('span', { className: `chef-qty-pill ${pillClass}`, textContent: `${it.qty}×` }),
             el('div', { className: 'chef-item-name flex-grow-1' }, [
               el('div', {
-                className: `fw-semibold small${isDone ? ' text-decoration-line-through text-secondary' : ''}`,
+                className: `fw-semibold small lh-sm${isDone ? ' text-decoration-line-through text-secondary' : ''}`,
                 textContent: it.name,
               }),
-              it.note ? el('div', { className: 'text-danger small fst-italic', textContent: `Catatan: ${it.note}` }) : null,
+              it.note ? el('div', { className: 'text-danger fst-italic lh-sm', style: 'font-size: 0.75rem;', textContent: `Catatan: ${it.note}` }) : null,
             ]),
             buildItemControl(ord, it),
           ]);
@@ -171,12 +231,13 @@ export function mount(ctx) {
           'button',
           {
             type: 'button',
-            className: 'btn btn-primary w-100 fw-semibold chef-action-btn',
-            onClick: () =>
+            className: 'btn btn-sm btn-primary w-100 fw-semibold chef-action-btn',
+            onClick: (e) =>
               updateOrderStatus(
                 ord,
                 { status: 'cooking', section: 'all' },
-                `${ord.orderCode} mulai dimasak — tandai tiap menu saat selesai.`
+                `${ord.orderCode} mulai dimasak — tandai tiap menu saat selesai.`,
+                e.currentTarget
               ),
           },
           [el('i', { className: 'bi bi-fire me-1' }), 'Mulai Masak']
@@ -194,9 +255,14 @@ export function mount(ctx) {
         'button',
         {
           type: 'button',
-          className: 'btn btn-outline-secondary w-100 fw-semibold chef-action-btn',
-          onClick: () =>
-            updateOrderStatus(ord, { status: 'completed', section: 'all' }, `Pesanan ${ord.orderCode} selesai / diambil.`),
+          className: 'btn btn-sm btn-outline-secondary w-100 fw-semibold chef-action-btn',
+          onClick: (e) =>
+            updateOrderStatus(
+              ord,
+              { status: 'completed', section: 'all' },
+              `Pesanan ${ord.orderCode} selesai / diambil.`,
+              e.currentTarget
+            ),
         },
         [el('i', { className: 'bi bi-check2-all me-1' }), 'Selesai / Diambil']
       );
@@ -359,11 +425,11 @@ export function mount(ctx) {
       const serviceBanner =
         ord.serviceType === 'dine_in'
           ? el('div', {
-              className: 'alert alert-primary py-1 px-2 mb-2 chef-service-banner text-center',
+              className: 'alert alert-primary py-1 px-2 mb-1 chef-service-banner text-center',
               textContent: `MAKAN DI TEMPAT · MEJA ${ord.tableNumber || '-'}`,
             })
           : el('div', {
-              className: 'alert alert-dark py-1 px-2 mb-2 chef-service-banner text-center',
+              className: 'alert alert-dark py-1 px-2 mb-1 chef-service-banner text-center',
               textContent: 'DIBUNGKUS (TAKE AWAY)',
             });
 
@@ -412,16 +478,16 @@ export function mount(ctx) {
       ].filter(Boolean);
 
       const ticket = el('div', { className: `card shadow-sm chef-ticket status-${ord.status}` }, [
-        el('div', { className: 'card-header d-flex flex-wrap justify-content-between align-items-center gap-1 py-2' }, [
+        el('div', { className: 'card-header d-flex flex-wrap justify-content-between align-items-center gap-1 py-1 px-2' }, [
           el('div', { className: 'd-flex flex-wrap align-items-center gap-1 min-w-0' }, [
-            el('span', { className: 'fw-bold fs-5', textContent: ord.orderCode || ord.id }),
+            el('span', { className: 'fw-bold fs-6', textContent: ord.orderCode || ord.id }),
             ord.isEdited ? el('span', { className: 'badge text-bg-info badge-edited-pulse', textContent: 'DIEDIT' }) : null,
           ]),
           el('span', { className: `badge ${st.badge}`, textContent: st.text }),
         ]),
-        el('div', { className: 'card-body d-flex flex-column' }, [
+        el('div', { className: 'card-body p-2 d-flex flex-column' }, [
           serviceBanner,
-          el('div', { className: 'd-flex flex-wrap justify-content-between gap-1 small text-secondary mb-2' }, [
+          el('div', { className: 'd-flex flex-wrap justify-content-between gap-1 text-secondary mb-1', style: 'font-size: 0.76rem;' }, [
             el('span', {}, [el('i', { className: 'bi bi-person me-1' }), ord.customerName || 'Tamu']),
             el('span', {}, [
               el('i', { className: 'bi bi-clock me-1' }),
@@ -429,25 +495,25 @@ export function mount(ctx) {
             ]),
           ]),
           ord.status === 'cancelled'
-            ? el('div', { className: 'alert alert-danger py-2 small mb-2' }, [
+            ? el('div', { className: 'alert alert-danger py-1 px-2 small mb-1' }, [
                 el('strong', { textContent: 'PESANAN DIBATALKAN: ' }),
                 ord.cancelReason || 'Dibatalkan oleh kasir',
               ])
             : null,
           ord.notes
-            ? el('div', { className: 'alert alert-warning py-1 px-2 small mb-2' }, [
+            ? el('div', { className: 'alert alert-warning py-1 px-2 small mb-1' }, [
                 el('i', { className: 'bi bi-chat-left-text me-1' }),
                 ord.notes,
               ])
             : null,
           el('div', { className: 'flex-grow-1' }, [foodRender.node, drinkRender.node]),
           footerControls.length > 0
-            ? el('div', { className: 'chef-ticket-actions flex-shrink-0 d-grid gap-2 pt-2 mt-1 border-top' }, footerControls)
+            ? el('div', { className: 'chef-ticket-actions flex-shrink-0 d-grid gap-1 pt-1 mt-1 border-top' }, footerControls)
             : null,
         ]),
       ]);
 
-      grid.appendChild(el('div', { className: 'col-md-6 col-xl-4' }, [ticket]));
+      grid.appendChild(el('div', { className: 'col-sm-6 col-lg-4 col-xxl-3' }, [ticket]));
     }
   };
 

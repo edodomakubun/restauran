@@ -33,7 +33,7 @@
     <style>html.auth-pending body{visibility:hidden}</style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
     <meta name="theme-color" content="#0d6efd" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./assets/img/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./assets/img/app-icon-192.png" />
@@ -144,13 +144,23 @@
                         </div>
                       </div>
 
-                      <div class="border rounded p-3 d-flex justify-content-between align-items-center gap-3">
+                      <div class="border rounded p-3 mb-3 d-flex justify-content-between align-items-center gap-3">
                         <div class="min-w-0">
                           <div class="fw-semibold">Izinkan Kasir Membatalkan Pesanan Saat Sedang Dimasak</div>
                           <div class="small text-secondary">Jika aktif, Kasir dapat membatalkan pesanan yang sudah mulai dimasak dan Layar Chef akan menampilkan peringatan pembatalan.</div>
                         </div>
                         <div class="form-check form-switch fs-4 mb-0 flex-shrink-0">
                           <input class="form-check-input" type="checkbox" id="opt-cancel-cooking" />
+                        </div>
+                      </div>
+
+                      <div class="border rounded p-3 d-flex justify-content-between align-items-center gap-3">
+                        <div class="min-w-0">
+                          <div class="fw-semibold">Izinkan Kasir Melihat Laporan Penjualan</div>
+                          <div class="small text-secondary">Jika aktif, Kasir dapat membuka halaman Laporan Penjualan (rekap harian, mingguan, bulanan, tahunan) dan mengekspor Excel.</div>
+                        </div>
+                        <div class="form-check form-switch fs-4 mb-0 flex-shrink-0">
+                          <input class="form-check-input" type="checkbox" id="opt-view-report" />
                         </div>
                       </div>
                     </div>
@@ -161,6 +171,34 @@
                       </button>
                     </div>
                   </form>
+                </div>
+
+                <div class="card card-outline card-danger mt-3">
+                  <div class="card-header">
+                    <h3 class="card-title mb-0 text-danger">
+                      <i class="bi bi-database-x me-1"></i> Manajemen Database Pesanan
+                    </h3>
+                  </div>
+                  <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div class="min-w-0">
+                      <div class="fw-semibold">
+                        Hapus Semua Orderan di Database
+                        <span id="db-orders-count" class="badge text-bg-secondary ms-1">0 pesanan</span>
+                      </div>
+                      <div class="small text-secondary">
+                        Menghapus seluruh riwayat dan daftar pesanan (aktif, selesai, dan dibatalkan) secara permanen. Cocok untuk reset data uji coba atau tutup buku.
+                      </div>
+                    </div>
+                    <button
+                      id="btn-delete-all-orders"
+                      type="button"
+                      class="btn btn-danger flex-shrink-0"
+                      data-bs-toggle="modal"
+                      data-bs-target="#deleteAllOrdersModal"
+                    >
+                      <i class="bi bi-trash3-fill me-1"></i> Hapus Semua Orderan
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -173,7 +211,32 @@
       </footer>
     </div>
 
-    <div id="app-page-modals"></div>
+    <div id="app-page-modals">
+      <div class="modal fade" id="deleteAllOrdersModal" tabindex="-1" aria-labelledby="deleteAllOrdersLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+              <h5 class="modal-title" id="deleteAllOrdersLabel">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i> Hapus Semua Orderan?
+              </h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body">
+              <p class="mb-2">
+                Tindakan ini akan menghapus <strong>semua pesanan</strong> (<span id="modal-orders-count" class="fw-bold text-danger">0</span> data) dari database secara permanen, termasuk pesanan yang sedang berjalan, selesai, maupun dibatalkan.
+              </p>
+              <p class="small text-secondary mb-0">Data yang sudah dihapus tidak dapat dikembalikan.</p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+              <button type="button" id="confirm-delete-all-orders" class="btn btn-danger">
+                <i class="bi bi-trash3-fill me-1"></i> Ya, Hapus Semua
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     <nav id="mobile-bottom-nav" class="mobile-bottom-nav d-lg-none" aria-label="Navigasi cepat aplikasi"></nav>
 
     <script src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.17.0/browser/overlayscrollbars.browser.es6.min.js" crossorigin="anonymous"></script>

@@ -4,6 +4,8 @@
 import {
   getStoreSnapshot,
   homePageForRole,
+  isSoundEnabled,
+  playChime,
   renderAppChrome,
   requireAuth,
   setTopProgress,
@@ -15,6 +17,12 @@ import {
 const PAGE_LOADERS = {
   dashboard: () => import('./pages/dashboard.js'),
   pesanan: () => import('./pages/pesanan.js'),
+  'daftar-pesanan': () => import('./pages/daftar-pesanan.js'),
+  meja: () => import('./pages/meja.js'),
+  pembayaran: () => import('./pages/pembayaran.js'),
+  laporan: () => import('./pages/laporan.js'),
+  panduan: () => import('./pages/panduan.js'),
+  developer: () => import('./pages/developer.js'),
   chef: () => import('./pages/chef.js'),
   menu: () => import('./pages/menu.js'),
   pengguna: () => import('./pages/pengguna.js'),
@@ -25,6 +33,12 @@ const ROUTE_META = {
   'index.html': { id: 'dashboard', roles: ['admin', 'kasir'], href: './index.html' },
   '': { id: 'dashboard', roles: ['admin', 'kasir'], href: './index.html' },
   'pesanan.html': { id: 'pesanan', roles: ['admin', 'kasir'], href: './pesanan.html' },
+  'daftar-pesanan.html': { id: 'daftar-pesanan', roles: ['admin', 'kasir'], href: './daftar-pesanan.html' },
+  'meja.html': { id: 'meja', roles: ['admin', 'kasir'], href: './meja.html' },
+  'pembayaran.html': { id: 'pembayaran', roles: ['admin', 'kasir'], href: './pembayaran.html' },
+  'laporan.html': { id: 'laporan', roles: ['admin', 'kasir'], requiresSetting: 'kasirCanViewReport', href: './laporan.html' },
+  'panduan.html': { id: 'panduan', roles: ['admin', 'kasir', 'chef'], href: './panduan.html' },
+  'developer.html': { id: 'developer', roles: ['admin', 'kasir', 'chef'], href: './developer.html' },
   'chef.html': { id: 'chef', roles: ['admin', 'kasir', 'chef'], href: './chef.html' },
   'menu.html': { id: 'menu', roles: ['admin'], href: './menu.html' },
   'pengguna.html': { id: 'pengguna', roles: ['admin'], href: './pengguna.html' },
@@ -172,7 +186,11 @@ export async function navigateTo(href, { pushState = true } = {}) {
     globalThis.location.href = target.href;
     return;
   }
-  if (!target.roles.includes(activeSession.user.role)) {
+  const currentSettings = getStoreSnapshot().settings || activeSession.settings || {};
+  if (
+    !target.roles.includes(activeSession.user.role) ||
+    (target.requiresSetting && activeSession.user.role === 'kasir' && !currentSettings[target.requiresSetting])
+  ) {
     showToast('Anda tidak memiliki izin membuka halaman tersebut.', 'warning');
     const fallback = homePageForRole(activeSession.user.role);
     if (fallback !== target.href) return navigateTo(fallback, { pushState: true });
@@ -253,11 +271,89 @@ function bindGlobalRouterEvents() {
   });
 }
 
-export async function initAppShell({ pageId, allowedRoles }) {
+function getTimeGreeting() {
+  const hour = new Date().getHours();
+  if (hour >= 4 && hour < 11) return 'Selamat Pagi';
+  if (hour >= 11 && hour < 15) return 'Selamat Siang';
+  if (hour >= 15 && hour < 18) return 'Selamat Sore';
+  return 'Selamat Malam';
+}
+
+function getWelcomeGreetingText() {
+  const salam = getTimeGreeting();
+  try {
+    const u = JSON.parse(localStorage.getItem('restoran_auth_user') || 'null');
+    if (u?.role === 'admin') {
+      return `${salam}, Owner Dapur Laris Manis yang Muaaneessss`;
+    }
+    const name = u?.displayName || u?.name || u?.email || 'Rekan Tim';
+    return `${salam}, ${name}`;
+  } catch {
+    return salam;
+  }
+}
+
+function showPostLoginSplashIfNeeded() {
+  let shouldShow = document.documentElement.classList.contains('welcome-splash-active');
+  try {
+    if (sessionStorage.getItem('restoran_welcome_splash') === '1') {
+      shouldShow = true;
+      sessionStorage.removeItem('restoran_welcome_splash');
+    }
+  } catch {
+    // Abaikan
+  }
+  if (!shouldShow || document.getElementById('app-welcome-splash')) {
+    document.documentElement.classList.remove('welcome-splash-active');
+    return;
+  }
+
+  const splash = document.createElement('div');
+  splash.id = 'app-welcome-splash';
+  splash.className = 'app-welcome-splash';
+  splash.innerHTML = `
+    <div class="app-welcome-card">
+      <div class="app-welcome-logo-wrap">
+        <span class="app-welcome-ring"></span>
+        <img src="./assets/img/app-icon.svg" width="68" height="68" alt="" class="app-welcome-logo" />
+      </div>
+      <div class="app-welcome-greeting"></div>
+      <h1 class="app-welcome-title">Dapur Laris Manis</h1>
+      <p class="app-welcome-tagline">Laris Manis untuk yang Manis-Manis</p>
+      <div class="app-welcome-bar"><span></span></div>
+      <div class="app-welcome-hint">Ketuk di mana saja untuk masuk lebih cepat</div>
+    </div>
+  `;
+  const greetingEl = splash.querySelector('.app-welcome-greeting');
+  if (greetingEl) greetingEl.textContent = getWelcomeGreetingText();
+  document.body.appendChild(splash);
+
+  let dismissed = false;
+  const dismiss = () => {
+    if (dismissed) return;
+    dismissed = true;
+    if (isSoundEnabled()) playChime('welcome_out');
+    document.documentElement.classList.remove('welcome-splash-active');
+    splash.classList.add('is-leaving');
+    setTimeout(() => splash.remove(), 420);
+  };
+  splash.addEventListener('click', dismiss, { once: true });
+  setTimeout(dismiss, 5000);
+}
+
+export async function initAppShell({ pageId, allowedRoles, requiredKasirSetting = null }) {
+  showPostLoginSplashIfNeeded();
   cacheCurrentDocument(pageId);
 
   const session = await requireAuth(allowedRoles);
   if (!session) return;
+  if (requiredKasirSetting && session.user.role === 'kasir') {
+    const activeSettings = getStoreSnapshot().settings || session.settings || {};
+    if (!activeSettings[requiredKasirSetting]) {
+      globalThis.location.replace(homePageForRole(session.user.role));
+      return;
+    }
+  }
   activeSession = session;
 
   renderAppChrome(pageId, session);

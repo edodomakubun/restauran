@@ -190,6 +190,16 @@ const CHIME_PATTERNS = {
     { freq: 440.0, delay: 0, dur: 0.16, wave: 'triangle', vol: 0.15 },
     { freq: 329.63, delay: 0.15, dur: 0.24, wave: 'triangle', vol: 0.16 },
   ],
+  welcome_in: [
+    { freq: 523.25, delay: 0, dur: 0.18, wave: 'sine', vol: 0.14 },
+    { freq: 659.25, delay: 0.12, dur: 0.18, wave: 'sine', vol: 0.15 },
+    { freq: 783.99, delay: 0.24, dur: 0.2, wave: 'sine', vol: 0.16 },
+    { freq: 1046.5, delay: 0.36, dur: 0.38, wave: 'sine', vol: 0.17 },
+  ],
+  welcome_out: [
+    { freq: 783.99, delay: 0, dur: 0.14, wave: 'sine', vol: 0.13 },
+    { freq: 1046.5, delay: 0.1, dur: 0.26, wave: 'sine', vol: 0.15 },
+  ],
 };
 
 export function playChime(type = 'new') {
@@ -423,10 +433,12 @@ const initialSnap = typeof sessionStorage !== 'undefined' ? loadSessionSnapshot(
 const sharedStore = {
   orders: Array.isArray(initialSnap?.orders) ? initialSnap.orders : [],
   menu: Array.isArray(initialSnap?.menu) ? initialSnap.menu : [],
+  tables: Array.isArray(initialSnap?.tables) ? initialSnap.tables : [],
   users: Array.isArray(initialSnap?.users) ? initialSnap.users : [],
   settings: initialSnap?.settings || null,
   ordersReady: Boolean(initialSnap?.ordersReady),
   menuReady: Boolean(initialSnap?.menuReady),
+  tablesReady: Boolean(initialSnap?.tablesReady),
   usersReady: Boolean(initialSnap?.usersReady),
   settingsReady: Boolean(initialSnap?.settingsReady),
   started: false,
@@ -453,10 +465,12 @@ export function getStoreSnapshot() {
   return {
     orders: sharedStore.orders,
     menu: sharedStore.menu,
+    tables: sharedStore.tables,
     users: sharedStore.users,
     settings: sharedStore.settings,
     ordersReady: sharedStore.ordersReady,
     menuReady: sharedStore.menuReady,
+    tablesReady: sharedStore.tablesReady,
     usersReady: sharedStore.usersReady,
     settingsReady: sharedStore.settingsReady,
   };
@@ -546,6 +560,10 @@ export async function preloadAllData(role, settingsFromMe = null) {
         sharedStore.menu = res.items || [];
         sharedStore.menuReady = true;
       }),
+      apiFetch('/api/tables').then((res) => {
+        sharedStore.tables = res.tables || [];
+        sharedStore.tablesReady = true;
+      }),
     ];
     if (role === 'admin') {
       tasks.push(
@@ -559,8 +577,63 @@ export async function preloadAllData(role, settingsFromMe = null) {
     emitStoreUpdate();
   })();
 
-  // Timeout pengaman maks 1500ms agar login tetap cepat
-  await Promise.race([work, new Promise((r) => setTimeout(r, 1500))]);
+  // Timeout pengaman maks 350ms agar redirect login terasa instan
+  await Promise.race([work, new Promise((r) => setTimeout(r, 350))]);
+}
+
+export function upsertOrderInStore(order) {
+  if (!order?.id) return;
+  const idx = sharedStore.orders.findIndex((o) => o.id === order.id);
+  if (idx >= 0) {
+    sharedStore.orders[idx] = order;
+  } else {
+    sharedStore.orders = [order, ...sharedStore.orders];
+  }
+  sharedStore.ordersReady = true;
+  emitStoreUpdate();
+}
+
+export function applyOptimisticOrderPatch(orderId, updaterFn) {
+  const idx = sharedStore.orders.findIndex((o) => o.id === orderId);
+  if (idx < 0) {
+    return { commit: (srv) => upsertOrderInStore(srv), rollback: () => {} };
+  }
+  const prevSnapshot = structuredClone(sharedStore.orders[idx]);
+  const nextOrder = updaterFn(structuredClone(prevSnapshot));
+  if (nextOrder) {
+    sharedStore.orders[idx] = nextOrder;
+    emitStoreUpdate();
+  }
+  return {
+    commit: (serverOrder) => {
+      if (serverOrder) upsertOrderInStore(serverOrder);
+    },
+    rollback: () => {
+      const currIdx = sharedStore.orders.findIndex((o) => o.id === orderId);
+      if (currIdx >= 0) {
+        sharedStore.orders[currIdx] = prevSnapshot;
+        emitStoreUpdate();
+      }
+    },
+  };
+}
+
+export function applyOptimisticOrderDelete(orderId) {
+  const idx = sharedStore.orders.findIndex((o) => o.id === orderId);
+  if (idx < 0) return { rollback: () => {} };
+  const removed = sharedStore.orders[idx];
+  sharedStore.orders = sharedStore.orders.filter((o) => o.id !== orderId);
+  emitStoreUpdate();
+  return {
+    rollback: () => {
+      if (!sharedStore.orders.some((o) => o.id === orderId)) {
+        const copy = [...sharedStore.orders];
+        copy.splice(Math.min(idx, copy.length), 0, removed);
+        sharedStore.orders = copy;
+        emitStoreUpdate();
+      }
+    },
+  };
 }
 
 export async function refreshLocalCollections(role = null) {
@@ -570,6 +643,10 @@ export async function refreshLocalCollections(role = null) {
     apiFetch('/api/menu').then((res) => {
       sharedStore.menu = res.items || [];
       sharedStore.menuReady = true;
+    }),
+    apiFetch('/api/tables').then((res) => {
+      sharedStore.tables = res.tables || [];
+      sharedStore.tablesReady = true;
     }),
   ];
   if (role === 'admin') {
@@ -654,7 +731,22 @@ export async function startRealtimeStore(session) {
       )
     );
 
-    // 4. Users realtime (khusus Admin)
+    // 4. Tables realtime
+    sharedStore.unsubs.push(
+      onSnapshot(
+        collection(fb.db, 'tables'),
+        (snap) => {
+          sharedStore.tables = snap.docs
+            .map((d) => ({ id: d.id, ...d.data() }))
+            .sort((a, b) => String(a.number || '').localeCompare(String(b.number || ''), 'id', { numeric: true }));
+          sharedStore.tablesReady = true;
+          emitStoreUpdate();
+        },
+        () => {}
+      )
+    );
+
+    // 5. Users realtime (khusus Admin)
     if (role === 'admin') {
       sharedStore.unsubs.push(
         onSnapshot(
@@ -691,10 +783,10 @@ export async function startRealtimeStore(session) {
         sharedStore.settingsReady = true;
       }
       globalOrderNotifier?.(sharedStore.orders);
-      if (force || !sharedStore.menuReady) {
+      if (force || !sharedStore.menuReady || !sharedStore.tablesReady) {
         await refreshLocalCollections(role);
       } else {
-        emitStoreUpdate();
+        await refreshLocalCollections(role);
       }
     } catch {
       // Abaikan error sementara saat polling latar belakang
@@ -832,7 +924,16 @@ export async function requireAuth(allowedRoles = ['admin', 'kasir', 'chef']) {
     return null;
   }
 
-  try {
+  const cachedUser = (() => {
+    try {
+      const u = JSON.parse(localStorage.getItem(USER_STORAGE_KEY) || 'null');
+      return u && u.role ? u : null;
+    } catch {
+      return null;
+    }
+  })();
+
+  const syncSessionFromServer = async () => {
     const session = await apiFetch('/api/me');
     const normalizedUser = {
       ...session.user,
@@ -840,13 +941,39 @@ export async function requireAuth(allowedRoles = ['admin', 'kasir', 'chef']) {
     };
     const { settings, mode } = session;
     localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(normalizedUser));
+    if (settings) {
+      sharedStore.settings = settings;
+      sharedStore.settingsReady = true;
+      emitStoreUpdate();
+    }
     if (!allowedRoles.includes(normalizedUser.role)) {
       globalThis.location.replace(homePageForRole(normalizedUser.role));
       return null;
     }
+    return { user: normalizedUser, settings, mode };
+  };
+
+  if (cachedUser) {
+    if (!allowedRoles.includes(cachedUser.role)) {
+      globalThis.location.replace(homePageForRole(cachedUser.role));
+      return null;
+    }
     document.documentElement.classList.remove('auth-pending');
     document.body.style.visibility = 'visible';
-    return { user: normalizedUser, settings, mode };
+    // Validasi & segarkan sesi di latar belakang tanpa memblokir render awal
+    syncSessionFromServer().catch(() => {
+      localStorage.removeItem(USER_STORAGE_KEY);
+      globalThis.location.replace('./login.html');
+    });
+    return { user: cachedUser, settings: sharedStore.settings || {}, mode: cfg.mode };
+  }
+
+  try {
+    const res = await syncSessionFromServer();
+    if (!res) return null;
+    document.documentElement.classList.remove('auth-pending');
+    document.body.style.visibility = 'visible';
+    return res;
   } catch {
     localStorage.removeItem(USER_STORAGE_KEY);
     globalThis.location.replace('./login.html');
@@ -873,16 +1000,20 @@ export function statusLabel(status) {
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dasbor Restoran', shortLabel: 'Dasbor', href: './index.html', icon: 'bi-speedometer2', roles: ['admin', 'kasir'] },
-  { id: 'pesanan', label: 'Buat & Kelola Pesanan', shortLabel: 'Kasir', href: './pesanan.html', icon: 'bi-receipt-cutoff', roles: ['admin', 'kasir'] },
+  { header: 'OPERASIONAL', roles: ['admin', 'kasir'] },
+  { id: 'meja', label: 'Manajemen Meja', shortLabel: 'Meja', href: './meja.html', icon: 'bi-grid-3x3-gap', roles: ['admin', 'kasir'] },
+  { id: 'pesanan', label: 'Buat Pesanan', shortLabel: 'Kasir', href: './pesanan.html', icon: 'bi-receipt-cutoff', roles: ['admin', 'kasir'] },
+  { id: 'daftar-pesanan', label: 'Daftar Pesanan', shortLabel: 'Daftar', href: './daftar-pesanan.html', icon: 'bi-list-check', roles: ['admin', 'kasir'] },
   { id: 'chef', label: 'Layar Chef (Dapur)', shortLabel: 'Chef', href: './chef.html', icon: 'bi-fire', roles: ['admin', 'kasir', 'chef'] },
-  { header: 'MANAJEMEN ADMIN', roles: ['admin'] },
+  { id: 'pembayaran', label: 'Pembayaran & Struk', shortLabel: 'Bayar', href: './pembayaran.html', icon: 'bi-cash-coin', roles: ['admin', 'kasir'] },
+  { header: 'LAPORAN & ADMIN', roles: ['admin'] },
+  { id: 'laporan', label: 'Laporan Penjualan', shortLabel: 'Laporan', href: './laporan.html', icon: 'bi-bar-chart-line', roles: ['admin', 'kasir'], requiresSetting: 'kasirCanViewReport' },
   { id: 'menu', label: 'Kelola Daftar Menu', shortLabel: 'Menu', href: './menu.html', icon: 'bi-journal-richtext', roles: ['admin'] },
   { id: 'pengguna', label: 'Kelola Akun Staf', shortLabel: 'Staf', href: './pengguna.html', icon: 'bi-people-fill', roles: ['admin'] },
   { id: 'pengaturan', label: 'Pengaturan Izin Kasir', shortLabel: 'Izin', href: './pengaturan.html', icon: 'bi-sliders', roles: ['admin'] },
-  { header: 'MODUL MENDATANG', roles: ['admin', 'kasir'] },
-  { id: 'future-meja', label: 'Manajemen Meja', href: '#segera', icon: 'bi-grid-3x3-gap', roles: ['admin', 'kasir'], soon: true },
-  { id: 'future-bayar', label: 'Pembayaran & Struk', href: '#segera', icon: 'bi-cash-coin', roles: ['admin', 'kasir'], soon: true },
-  { id: 'future-laporan', label: 'Laporan Penjualan', href: '#segera', icon: 'bi-bar-chart-line', roles: ['admin'], soon: true },
+  { header: 'BANTUAN', roles: ['admin', 'kasir', 'chef'] },
+  { id: 'panduan', label: 'Panduan Pengguna', shortLabel: 'Panduan', href: './panduan.html', icon: 'bi-book-half', roles: ['admin', 'kasir', 'chef'] },
+  { id: 'developer', label: 'Developer', shortLabel: 'Dev', href: './developer.html', icon: 'bi-person-workspace', roles: ['admin', 'kasir', 'chef'] },
 ];
 
 export function renderMobileBottomNav(activeId, user) {
@@ -900,9 +1031,11 @@ export function renderMobileBottomNav(activeId, user) {
     ];
   } else if (user.role === 'kasir') {
     items = [
-      { id: 'dashboard', label: 'Dasbor', href: './index.html', icon: 'bi-speedometer2' },
-      { id: 'pesanan', label: 'Pesanan', href: './pesanan.html', icon: 'bi-receipt-cutoff' },
-      { id: 'chef', label: 'Chef', href: './chef.html', icon: 'bi-fire' },
+      { id: 'meja', label: 'Meja', href: './meja.html', icon: 'bi-grid-3x3-gap' },
+      { id: 'pesanan', label: 'Kasir', href: './pesanan.html', icon: 'bi-receipt-cutoff' },
+      { id: 'daftar-pesanan', label: 'Daftar', href: './daftar-pesanan.html', icon: 'bi-list-check' },
+      { id: 'pembayaran', label: 'Bayar', href: './pembayaran.html', icon: 'bi-cash-coin' },
+      { id: 'more', label: 'Lainnya', href: '#menu-sidebar', icon: 'bi-grid' },
     ];
   } else {
     items = [
@@ -953,6 +1086,10 @@ export function renderAppChrome(activeId, session) {
     navEl.replaceChildren();
     for (const item of NAV_ITEMS) {
       if (!item.roles.includes(user.role)) continue;
+      if (item.requiresSetting && user.role === 'kasir') {
+        const activeSettings = session?.settings || sharedStore.settings || {};
+        if (!activeSettings[item.requiresSetting]) continue;
+      }
       if (item.header) {
         navEl.appendChild(el('li', { className: 'nav-header', textContent: item.header }));
         continue;
@@ -1031,6 +1168,12 @@ export function renderAppChrome(activeId, session) {
 function activeIdFromPath() {
   const path = globalThis.location?.pathname || '';
   if (path.endsWith('/pesanan.html') || path.endsWith('/pesanan')) return 'pesanan';
+  if (path.endsWith('/daftar-pesanan.html') || path.endsWith('/daftar-pesanan')) return 'daftar-pesanan';
+  if (path.endsWith('/meja.html') || path.endsWith('/meja')) return 'meja';
+  if (path.endsWith('/pembayaran.html') || path.endsWith('/pembayaran')) return 'pembayaran';
+  if (path.endsWith('/laporan.html') || path.endsWith('/laporan')) return 'laporan';
+  if (path.endsWith('/panduan.html') || path.endsWith('/panduan')) return 'panduan';
+  if (path.endsWith('/developer.html') || path.endsWith('/developer')) return 'developer';
   if (path.endsWith('/chef.html') || path.endsWith('/chef')) return 'chef';
   if (path.endsWith('/menu.html') || path.endsWith('/menu')) return 'menu';
   if (path.endsWith('/pengguna.html') || path.endsWith('/pengguna')) return 'pengguna';

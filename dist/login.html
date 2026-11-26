@@ -2,7 +2,7 @@
 <html lang="id">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Masuk | RestoOrder</title>
+    <title>Masuk | Dapur Laris Manis</title>
     <script>
       (() => {
         'use strict';
@@ -19,7 +19,7 @@
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
     <meta name="theme-color" content="#0d6efd" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./assets/img/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./assets/img/app-icon-192.png" />
@@ -72,10 +72,10 @@
 
     <main class="login-box">
       <!-- Branding -->
-      <div class="login-brand text-center mb-4">
+      <div class="login-brand text-center mb-3">
         <img src="./assets/img/app-icon.svg" width="52" height="52" alt="" class="login-brand-icon mb-2">
-        <h1 class="login-brand-name mb-0"><b>Resto</b>Order</h1>
-        <p class="login-brand-tagline text-secondary mb-0">Sistem Kasir Restoran</p>
+        <h1 class="login-brand-name mb-0 fw-bold">Dapur Laris Manis</h1>
+        <p class="login-brand-tagline text-secondary mb-0">Laris Manis untuk yang Manis-Manis</p>
       </div>
 
       <!-- Card form -->
@@ -158,7 +158,9 @@
         bindFullscreenEnhancement,
         getRuntimeConfig,
         homePageForRole,
+        isSoundEnabled,
         loginWithEmailPassword,
+        playChime,
         registerServiceWorker,
       } from './js/app-client.js';
 
@@ -203,6 +205,15 @@
         submitBtn.textContent = 'Memproses...';
         try {
           const res = await loginWithEmailPassword(emailEl.value.trim(), passEl.value);
+          try {
+            sessionStorage.setItem('restoran_welcome_splash', '1');
+          } catch {
+            // Abaikan
+          }
+          if (isSoundEnabled()) {
+            playChime('welcome_in');
+            await new Promise((r) => setTimeout(r, 450));
+          }
           globalThis.location.href = homePageForRole(res.user.role);
         } catch (err) {
           errEl.textContent = err.message || 'Gagal masuk.';

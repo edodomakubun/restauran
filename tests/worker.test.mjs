@@ -303,3 +303,185 @@ test('Kitchen per-item workflow: single Mulai Masak then per-menu Selesai Dimasa
   assert.equal(drinkOnly.json.order.foodStatus, 'none');
   assert.equal(drinkOnly.json.order.drinkStatus, 'pending');
 });
+
+test('Same menu split variants with different notes preserve per-item status across chef and edit', async () => {
+  const { req, login } = makeApp();
+  const adminToken = await login('admin@restoran.local', 'admin123');
+  const kasirToken = await login('kasir@restoran.local', 'kasir123');
+  const chefToken = await login('chef@restoran.local', 'chef123');
+
+  // Admin allows editing while cooking
+  await req('PUT', '/api/settings', { kasirCanEditWhileCooking: true }, adminToken);
+
+  const created = await req(
+    'POST',
+    '/api/orders',
+    {
+      customerName: 'Budi',
+      serviceType: 'dine_in',
+      tableNumber: '03',
+      items: [
+        { name: 'Nasi Goreng', category: 'makanan', qty: 1, price: 20000, note: 'Tidak Pedas' },
+        { name: 'Nasi Goreng', category: 'makanan', qty: 1, price: 20000, note: 'Pedas' },
+      ],
+    },
+    kasirToken
+  );
+  assert.equal(created.status, 201);
+  assert.equal(created.json.order.items.length, 2);
+  assert.equal(created.json.order.items[0].note, 'Tidak Pedas');
+  assert.equal(created.json.order.items[1].note, 'Pedas');
+
+  const id = created.json.order.id;
+  await req('PATCH', `/api/orders/${id}/status`, { status: 'cooking', section: 'all' }, chefToken);
+
+  // Only variant 1 (idx 0: Tidak Pedas) is finished
+  const markFirst = await req('PATCH', `/api/orders/${id}/status`, { status: 'ready', itemIndex: 0 }, chefToken);
+  assert.equal(markFirst.status, 200);
+  assert.equal(markFirst.json.order.items[0].itemStatus, 'ready');
+  assert.equal(markFirst.json.order.items[1].itemStatus, 'cooking');
+
+  // Kasir edits order (adds Es Teh) -> each Nasi Goreng variant keeps its own itemStatus!
+  const edited = await req(
+    'PUT',
+    `/api/orders/${id}`,
+    {
+      customerName: 'Budi',
+      serviceType: 'dine_in',
+      tableNumber: '03',
+      items: [
+        { name: 'Nasi Goreng', category: 'makanan', qty: 1, price: 20000, note: 'Tidak Pedas' },
+        { name: 'Nasi Goreng', category: 'makanan', qty: 1, price: 20000, note: 'Pedas' },
+        { name: 'Es Teh Manis', category: 'minuman', qty: 1, price: 5000, note: 'Kurang Gula' },
+      ],
+    },
+    kasirToken
+  );
+  assert.equal(edited.status, 200);
+  assert.equal(edited.json.order.items[0].itemStatus, 'ready');
+  assert.equal(edited.json.order.items[1].itemStatus, 'cooking');
+  assert.equal(edited.json.order.items[2].itemStatus, 'cooking');
+});
+
+test('DELETE /api/orders deletes all orders only for Admin', async () => {
+  const { req, login } = makeApp();
+  const adminToken = await login('admin@restoran.local', 'admin123');
+  const kasirToken = await login('kasir@restoran.local', 'kasir123');
+  const chefToken = await login('chef@restoran.local', 'chef123');
+
+  // Even if kasirCanDeleteOrder is true, kasir and chef cannot wipe all orders
+  await req('PUT', '/api/settings', { kasirCanDeleteOrder: true }, adminToken);
+
+  // Create two orders first
+  await req(
+    'POST',
+    '/api/orders',
+    { serviceType: 'take_away', items: [{ name: 'Nasi Goreng', category: 'makanan', qty: 1, price: 20000 }] },
+    kasirToken
+  );
+  await req(
+    'POST',
+    '/api/orders',
+    { serviceType: 'dine_in', tableNumber: '02', items: [{ name: 'Es Teh', category: 'minuman', qty: 2, price: 5000 }] },
+    kasirToken
+  );
+
+  const deniedKasir = await req('DELETE', '/api/orders', null, kasirToken);
+  assert.equal(deniedKasir.status, 403);
+
+  const deniedChef = await req('DELETE', '/api/orders', null, chefToken);
+  assert.equal(deniedChef.status, 403);
+
+  const before = await req('GET', '/api/orders', null, adminToken);
+  assert.ok(before.json.orders.length > 0);
+
+  const wiped = await req('DELETE', '/api/orders', null, adminToken);
+  assert.equal(wiped.status, 200);
+  assert.equal(wiped.json.deleted, true);
+  assert.equal(wiped.json.deletedCount, before.json.orders.length);
+
+  const after = await req('GET', '/api/orders', null, adminToken);
+  assert.equal(after.json.orders.length, 0);
+});
+
+test('POST /api/orders/:id/pay processes cash/non-cash payment, discount, change, and optional completion', async () => {
+  const { req, login } = makeApp();
+  const kasirToken = await login('kasir@restoran.local', 'kasir123');
+  const chefToken = await login('chef@restoran.local', 'chef123');
+
+  const created = await req(
+    'POST',
+    '/api/orders',
+    {
+      customerName: 'Rina',
+      serviceType: 'dine_in',
+      tableNumber: '09',
+      items: [{ name: 'Nasi Goreng', category: 'makanan', qty: 2, price: 25000 }],
+    },
+    kasirToken
+  );
+  assert.equal(created.status, 201);
+  assert.equal(created.json.order.paymentStatus, 'unpaid');
+  const id = created.json.order.id;
+
+  // Chef cannot process payment
+  const chefPay = await req('POST', `/api/orders/${id}/pay`, { paymentMethod: 'cash', paidAmount: 50000 }, chefToken);
+  assert.equal(chefPay.status, 403);
+
+  // Insufficient cash rejected
+  const shortPay = await req('POST', `/api/orders/${id}/pay`, { paymentMethod: 'cash', paidAmount: 30000 }, kasirToken);
+  assert.equal(shortPay.status, 400);
+
+  // Mark order ready in kitchen then pay cash with Rp 5.000 discount (net 45.000), paid 100.000 -> change 55.000
+  await req('PATCH', `/api/orders/${id}/status`, { status: 'cooking', section: 'all' }, chefToken);
+  await req('PATCH', `/api/orders/${id}/status`, { status: 'ready', section: 'all' }, chefToken);
+
+  const paid = await req(
+    'POST',
+    `/api/orders/${id}/pay`,
+    { paymentMethod: 'cash', discountAmount: 5000, paidAmount: 100000, markCompleted: true },
+    kasirToken
+  );
+  assert.equal(paid.status, 200);
+  assert.equal(paid.json.order.paymentStatus, 'paid');
+  assert.equal(paid.json.order.paymentMethod, 'cash');
+  assert.equal(paid.json.order.discountAmount, 5000);
+  assert.equal(paid.json.order.paidAmount, 100000);
+  assert.equal(paid.json.order.changeAmount, 55000);
+  assert.equal(paid.json.order.status, 'completed');
+});
+
+test('Table management RBAC: list default tables, Admin CRUD, and Kasir status-only update', async () => {
+  const { req, login } = makeApp();
+  const adminToken = await login('admin@restoran.local', 'admin123');
+  const kasirToken = await login('kasir@restoran.local', 'kasir123');
+  const chefToken = await login('chef@restoran.local', 'chef123');
+
+  const list = await req('GET', '/api/tables', null, kasirToken);
+  assert.equal(list.status, 200);
+  assert.ok(list.json.tables.length >= 8);
+  const firstId = list.json.tables[0].id;
+
+  // Chef & Kasir cannot create or delete tables
+  const kasirCreate = await req('POST', '/api/tables', { number: '99', area: 'Outdoor', capacity: 4 }, kasirToken);
+  assert.equal(kasirCreate.status, 403);
+  const chefCreate = await req('POST', '/api/tables', { number: '99', area: 'Outdoor', capacity: 4 }, chefToken);
+  assert.equal(chefCreate.status, 403);
+
+  // Kasir CAN update status (reserved / cleaning / available) but CANNOT change capacity/number
+  const kasirStatus = await req('PUT', `/api/tables/${firstId}`, { status: 'reserved' }, kasirToken);
+  assert.equal(kasirStatus.status, 200);
+  assert.equal(kasirStatus.json.table.status, 'reserved');
+
+  const kasirCap = await req('PUT', `/api/tables/${firstId}`, { capacity: 12 }, kasirToken);
+  assert.equal(kasirCap.status, 403);
+
+  // Admin CAN create & delete tables
+  const adminCreate = await req('POST', '/api/tables', { number: 'OUT-1', area: 'Outdoor', capacity: 6 }, adminToken);
+  assert.equal(adminCreate.status, 201);
+  const newId = adminCreate.json.table.id;
+
+  const adminDel = await req('DELETE', `/api/tables/${newId}`, null, adminToken);
+  assert.equal(adminDel.status, 200);
+  assert.equal(adminDel.json.deleted, true);
+});

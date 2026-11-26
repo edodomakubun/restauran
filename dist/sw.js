@@ -1,12 +1,20 @@
-const CACHE_NAME = 'restoorder-shell-v7';
+const CACHE_NAME = 'restoorder-shell-v42';
 const APP_SHELL_ASSETS = [
   './css/adminlte.css',
   './css/restaurant.css',
   './js/adminlte.js',
   './js/app-client.js',
   './js/app-router.js',
+  './js/sales-report.js',
+  './js/xlsx-export.js',
   './js/pages/dashboard.js',
   './js/pages/pesanan.js',
+  './js/pages/daftar-pesanan.js',
+  './js/pages/meja.js',
+  './js/pages/pembayaran.js',
+  './js/pages/laporan.js',
+  './js/pages/panduan.js',
+  './js/pages/developer.js',
   './js/pages/chef.js',
   './js/pages/menu.js',
   './js/pages/pengguna.js',
@@ -21,7 +29,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_SHELL_ASSETS).catch(() => {}))
+      .then((cache) => cache.addAll(APP_SHELL_ASSETS).catch(() => { }))
       .then(() => self.skipWaiting())
   );
 });
@@ -51,7 +59,7 @@ self.addEventListener('fetch', (event) => {
         .then((res) => {
           if (res.ok) {
             const copy = res.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)).catch(() => {});
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)).catch(() => { });
           }
           return res;
         })
@@ -67,7 +75,7 @@ self.addEventListener('fetch', (event) => {
         .then((res) => {
           if (res.ok) {
             const copy = res.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)).catch(() => {});
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)).catch(() => { });
           }
           return res;
         })

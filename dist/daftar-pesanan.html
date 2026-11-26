@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>RestoOrder | Daftar Pesanan</title>
+    <script>
+      (() => {
+        'use strict';
+        const root = document.documentElement;
+        const stored = (() => {
+          try { return localStorage.getItem('lte-theme'); } catch { return null; }
+        })();
+        const resolved = stored === 'dark' || stored === 'light'
+          ? stored
+          : (globalThis.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        root.setAttribute('data-bs-theme', resolved);
+        root.style.colorScheme = resolved;
+        try {
+          const u = JSON.parse(localStorage.getItem('restoran_auth_user') || 'null');
+          if (!u || !u.role) {
+            root.classList.add('auth-pending');
+            globalThis.location.replace('./login.html');
+          } else if (u.role !== 'admin' && u.role !== 'kasir') {
+            root.classList.add('auth-pending');
+            globalThis.location.replace('./chef.html');
+          }
+        } catch {
+          root.classList.add('auth-pending');
+          globalThis.location.replace('./login.html');
+        }
+      })();
+    </script>
+    <style>html.auth-pending body{visibility:hidden}</style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <meta name="theme-color" content="#0d6efd" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./assets/img/app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./assets/img/app-icon-192.png" />
+    <link rel="preload" href="./css/adminlte.css" as="style" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@fontsource/source-sans-3@5.3.1/index.css"
+      crossorigin="anonymous"
+      media="print"
+      onload="this.media = 'all'"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.17.0/styles/overlayscrollbars.min.css"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.2/font/bootstrap-icons.min.css"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="./css/adminlte.css" />
+    <link rel="stylesheet" href="./css/restaurant.css" />
+  </head>
+  <body class="layout-fixed fixed-header sidebar-expand-lg bg-body-tertiary">
+    <div class="app-wrapper">
+      <nav class="app-header navbar navbar-expand bg-body">
+        <div class="container-fluid">
+          <ul class="navbar-nav">
+            <li class="nav-item">
+              <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button" aria-label="Alihkan bilah sisi">
+                <i class="bi bi-list"></i>
+              </a>
+            </li>
+            <li class="nav-item d-none d-md-block">
+              <a href="./pesanan.html" class="nav-link"><i class="bi bi-plus-circle me-1"></i>Buat Pesanan</a>
+            </li>
+            <li class="nav-item d-none d-md-block">
+              <a href="./chef.html" class="nav-link"><i class="bi bi-fire me-1"></i>Layar Chef</a>
+            </li>
+          </ul>
+          <ul class="navbar-nav ms-auto align-items-center gap-1 gap-sm-2">
+            <li class="nav-item form-check form-switch mb-0 me-1 d-flex align-items-center gap-1">
+              <input class="form-check-input mt-0" type="checkbox" id="sound-toggle" checked aria-label="Suara notifikasi" />
+              <label class="form-check-label small" for="sound-toggle">
+                <i class="bi bi-volume-up"></i><span class="d-none d-sm-inline"> Suara</span>
+              </label>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" data-lte-toggle="fullscreen" aria-label="Layar penuh" title="Layar penuh">
+                <i data-lte-icon="maximize" class="bi bi-arrows-fullscreen"></i>
+                <i data-lte-icon="minimize" class="bi bi-fullscreen-exit d-none"></i>
+              </a>
+            </li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-label="Ubah tema">
+                <i class="bi bi-circle-half"></i>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><button class="dropdown-item" type="button" data-bs-theme-value="light"><i class="bi bi-sun-fill me-2"></i>Terang</button></li>
+                <li><button class="dropdown-item" type="button" data-bs-theme-value="dark"><i class="bi bi-moon-stars-fill me-2"></i>Gelap</button></li>
+                <li><button class="dropdown-item" type="button" data-bs-theme-value="auto"><i class="bi bi-circle-half me-2"></i>Otomatis</button></li>
+              </ul>
+            </li>
+            <li class="nav-item d-flex align-items-center gap-1 gap-sm-2 ps-2 border-start">
+              <span id="nav-user-role" class="badge text-bg-secondary">-</span>
+              <span id="nav-user-name" class="fw-semibold small d-none d-md-inline">-</span>
+              <button id="btn-logout" type="button" class="btn btn-sm btn-outline-danger" aria-label="Keluar">
+                <i class="bi bi-box-arrow-right"></i> <span class="d-none d-sm-inline">Keluar</span>
+              </button>
+            </li>
+          </ul>
+        </div>
+      </nav>
+
+      <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
+        <div class="sidebar-brand">
+          <a href="./pesanan.html" class="brand-link">
+            <img src="./assets/img/app-icon.svg" alt="Logo RestoOrder" class="brand-image opacity-90 shadow rounded" />
+            <span class="brand-text fw-light"><b>Resto</b>Order</span>
+          </a>
+        </div>
+        <div class="sidebar-wrapper">
+          <nav class="mt-2" aria-label="Navigasi restoran">
+            <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" data-accordion="false" id="navigation"></ul>
+          </nav>
+        </div>
+      </aside>
+
+      <main class="app-main">
+        <div class="app-content-header">
+          <div class="container-fluid">
+            <div class="row align-items-center g-2">
+              <div class="col-sm-6 d-flex flex-wrap align-items-center gap-2">
+                <h1 class="mb-0 fs-3"><i class="bi bi-list-check text-primary me-2"></i>Daftar Pesanan</h1>
+                <span id="orders-count-badge" class="badge text-bg-primary rounded-pill">0</span>
+                <span id="orders-ready-badge" class="badge text-bg-success rounded-pill d-none">0 Siap</span>
+              </div>
+              <div class="col-sm-6 text-sm-end d-flex flex-wrap gap-1 justify-content-sm-end">
+                <a href="./pesanan.html" class="btn btn-primary btn-sm">
+                  <i class="bi bi-plus-circle me-1"></i> Buat Pesanan Baru
+                </a>
+                <a href="./chef.html" class="btn btn-outline-warning btn-sm">
+                  <i class="bi bi-fire me-1"></i> Layar Chef
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="app-content">
+          <div class="container-fluid">
+            <div id="orders-list-card" class="card card-outline card-primary">
+              <div class="card-body p-0">
+                <div class="p-2 p-md-3 border-bottom bg-body-tertiary d-flex flex-column flex-lg-row gap-2 justify-content-between align-items-stretch align-items-lg-center">
+                  <div id="orders-status-tabs" class="d-flex flex-wrap gap-1" role="group" aria-label="Filter status pesanan">
+                    <button type="button" class="btn btn-sm btn-primary orders-status-btn" data-status="all" data-variant="primary" aria-pressed="true">
+                      Semua <span class="badge text-bg-light text-dark ms-1" data-status-count="all">0</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-warning orders-status-btn" data-status="pending" data-variant="warning" aria-pressed="false">
+                      Menunggu <span class="badge text-bg-warning ms-1" data-status-count="pending">0</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-primary orders-status-btn" data-status="cooking" data-variant="primary" aria-pressed="false">
+                      Dimasak <span class="badge text-bg-primary ms-1" data-status-count="cooking">0</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-success orders-status-btn" data-status="ready" data-variant="success" aria-pressed="false">
+                      Siap Disajikan <span class="badge text-bg-success ms-1" data-status-count="ready">0</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary orders-status-btn" data-status="completed" data-variant="secondary" aria-pressed="false">
+                      Selesai <span class="badge text-bg-secondary ms-1" data-status-count="completed">0</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-danger orders-status-btn" data-status="cancelled" data-variant="danger" aria-pressed="false">
+                      Dibatalkan <span class="badge text-bg-danger ms-1" data-status-count="cancelled">0</span>
+                    </button>
+                  </div>
+                  <input id="orders-search" type="search" class="form-control form-control-sm w-100 w-lg-auto" placeholder="Cari kode / pembeli..." style="min-width: 180px; max-width: 260px;" />
+                </div>
+                <div id="orders-status-view-header" class="px-2 px-md-3 py-2 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2 small"></div>
+                <div id="orders-mobile-list" class="d-md-none p-2 d-flex flex-column gap-2"></div>
+                <div class="table-responsive d-none d-md-block">
+                  <table class="table table-hover align-middle mb-0">
+                    <thead>
+                      <tr>
+                        <th>Kode &amp; Waktu</th>
+                        <th>Pemesan &amp; Layanan</th>
+                        <th>Makanan &amp; Minuman</th>
+                        <th>Total</th>
+                        <th>Status Dapur</th>
+                        <th class="text-end">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody id="orders-table-body">
+                      <tr>
+                        <td colspan="6" class="text-center text-secondary py-4">Memuat daftar pesanan...</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <footer class="app-footer">
+        <div class="float-end d-none d-sm-inline">Daftar Pesanan Real-Time</div>
+        <strong>RestoOrder</strong> — Terhubung Real-Time ke Layar Chef.
+      </footer>
+    </div>
+
+    <div id="app-page-modals">
+      <!-- Modal Batalkan Pesanan -->
+      <div class="modal fade" id="cancelModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title text-warning"><i class="bi bi-exclamation-triangle me-1"></i> Batalkan Pesanan</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body">
+              <p class="mb-2">Anda akan membatalkan pesanan <strong id="cancel-modal-code"></strong>. Status akan langsung terlihat sebagai <strong>DIBATALKAN</strong> di Layar Chef.</p>
+              <label for="cancel-reason-input" class="form-label small fw-semibold">Alasan Pembatalan</label>
+              <input id="cancel-reason-input" type="text" class="form-control" placeholder="Misal: Pembeli mengganti pesanan / batal memesan" />
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+              <button id="confirm-cancel-btn" type="button" class="btn btn-warning">Ya, Batalkan Pesanan</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Hapus Permanen -->
+      <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title text-danger"><i class="bi bi-trash me-1"></i> Hapus Pesanan Permanen</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body">
+              <p class="mb-0">Hapus permanen pesanan <strong id="delete-modal-code"></strong>? Data akan dihapus dari basis data dan langsung hilang dari Layar Chef.</p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+              <button id="confirm-delete-btn" type="button" class="btn btn-danger">Hapus Permanen</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <nav id="mobile-bottom-nav" class="mobile-bottom-nav d-lg-none" aria-label="Navigasi cepat aplikasi"></nav>
+
+    <script src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.17.0/browser/overlayscrollbars.browser.es6.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.9/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
+    <script src="./js/adminlte.js"></script>
+    <script type="module">
+      import { initAppShell } from './js/app-router.js';
+      void initAppShell({ pageId: 'daftar-pesanan', allowedRoles: ['admin', 'kasir'] });
+    </script>
+  </body>
+</html>

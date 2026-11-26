@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>RestoOrder | Pembayaran &amp; Struk</title>
+    <script>
+      (() => {
+        'use strict';
+        const root = document.documentElement;
+        const stored = (() => {
+          try { return localStorage.getItem('lte-theme'); } catch { return null; }
+        })();
+        const resolved = stored === 'dark' || stored === 'light'
+          ? stored
+          : (globalThis.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        root.setAttribute('data-bs-theme', resolved);
+        root.style.colorScheme = resolved;
+        try {
+          const u = JSON.parse(localStorage.getItem('restoran_auth_user') || 'null');
+          if (!u || !u.role) {
+            root.classList.add('auth-pending');
+            globalThis.location.replace('./login.html');
+          } else if (u.role !== 'admin' && u.role !== 'kasir') {
+            root.classList.add('auth-pending');
+            globalThis.location.replace('./chef.html');
+          }
+        } catch {
+          root.classList.add('auth-pending');
+          globalThis.location.replace('./login.html');
+        }
+      })();
+    </script>
+    <style>html.auth-pending body{visibility:hidden}</style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <meta name="theme-color" content="#0d6efd" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./assets/img/app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./assets/img/app-icon-192.png" />
+    <link rel="preload" href="./css/adminlte.css" as="style" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@fontsource/source-sans-3@5.3.1/index.css"
+      crossorigin="anonymous"
+      media="print"
+      onload="this.media = 'all'"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.17.0/styles/overlayscrollbars.min.css"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.2/font/bootstrap-icons.min.css"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="./css/adminlte.css" />
+    <link rel="stylesheet" href="./css/restaurant.css" />
+  </head>
+  <body class="layout-fixed fixed-header sidebar-expand-lg bg-body-tertiary">
+    <div class="app-wrapper">
+      <nav class="app-header navbar navbar-expand bg-body no-print">
+        <div class="container-fluid">
+          <ul class="navbar-nav">
+            <li class="nav-item">
+              <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button" aria-label="Alihkan bilah sisi">
+                <i class="bi bi-list"></i>
+              </a>
+            </li>
+            <li class="nav-item d-none d-md-block">
+              <a href="./pesanan.html" class="nav-link"><i class="bi bi-plus-circle me-1"></i>Buat Pesanan</a>
+            </li>
+            <li class="nav-item d-none d-md-block">
+              <a href="./daftar-pesanan.html" class="nav-link"><i class="bi bi-list-check me-1"></i>Daftar Pesanan</a>
+            </li>
+          </ul>
+          <ul class="navbar-nav ms-auto align-items-center gap-1 gap-sm-2">
+            <li class="nav-item form-check form-switch mb-0 me-1 d-flex align-items-center gap-1">
+              <input class="form-check-input mt-0" type="checkbox" id="sound-toggle" checked aria-label="Suara notifikasi" />
+              <label class="form-check-label small" for="sound-toggle">
+                <i class="bi bi-volume-up"></i><span class="d-none d-sm-inline"> Suara</span>
+              </label>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" data-lte-toggle="fullscreen" aria-label="Layar penuh" title="Layar penuh">
+                <i data-lte-icon="maximize" class="bi bi-arrows-fullscreen"></i>
+                <i data-lte-icon="minimize" class="bi bi-fullscreen-exit d-none"></i>
+              </a>
+            </li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-label="Ubah tema">
+                <i class="bi bi-circle-half"></i>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><button class="dropdown-item" type="button" data-bs-theme-value="light"><i class="bi bi-sun-fill me-2"></i>Terang</button></li>
+                <li><button class="dropdown-item" type="button" data-bs-theme-value="dark"><i class="bi bi-moon-stars-fill me-2"></i>Gelap</button></li>
+                <li><button class="dropdown-item" type="button" data-bs-theme-value="auto"><i class="bi bi-circle-half me-2"></i>Otomatis</button></li>
+              </ul>
+            </li>
+            <li class="nav-item d-flex align-items-center gap-1 gap-sm-2 ps-2 border-start">
+              <span id="nav-user-role" class="badge text-bg-secondary">-</span>
+              <span id="nav-user-name" class="fw-semibold small d-none d-md-inline">-</span>
+              <button id="btn-logout" type="button" class="btn btn-sm btn-outline-danger" aria-label="Keluar">
+                <i class="bi bi-box-arrow-right"></i> <span class="d-none d-sm-inline">Keluar</span>
+              </button>
+            </li>
+          </ul>
+        </div>
+      </nav>
+
+      <aside class="app-sidebar bg-body-secondary shadow no-print" data-bs-theme="dark">
+        <div class="sidebar-brand">
+          <a href="./index.html" class="brand-link">
+            <img src="./assets/img/app-icon.svg" alt="Logo RestoOrder" class="brand-image opacity-90 shadow rounded" />
+            <span class="brand-text fw-light"><b>Resto</b>Order</span>
+          </a>
+        </div>
+        <div class="sidebar-wrapper">
+          <nav class="mt-2" aria-label="Navigasi restoran">
+            <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" data-accordion="false" id="navigation"></ul>
+          </nav>
+        </div>
+      </aside>
+
+      <main class="app-main">
+        <div class="app-content-header no-print">
+          <div class="container-fluid">
+            <div class="row align-items-center g-2">
+              <div class="col-sm-6">
+                <h1 class="mb-0 fs-3"><i class="bi bi-cash-coin text-success me-2"></i>Pembayaran &amp; Struk</h1>
+              </div>
+              <div class="col-sm-6 text-sm-end">
+                <a href="./daftar-pesanan.html" class="btn btn-outline-primary btn-sm">
+                  <i class="bi bi-list-check me-1"></i> Daftar Pesanan
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="app-content">
+          <div class="container-fluid">
+            <div class="row g-2 align-items-start">
+              <!-- Kolom Kiri: Daftar Tagihan -->
+              <div class="col-lg-5 no-print">
+                <div class="card card-outline card-primary mb-0">
+                  <div class="card-header p-2 d-flex flex-wrap justify-content-between align-items-center gap-1">
+                    <div class="d-flex flex-wrap gap-1" role="group" aria-label="Filter pembayaran">
+                      <button type="button" class="btn btn-xs btn-warning pay-filter-btn" data-filter="unpaid">
+                        Belum Bayar <span id="cnt-unpaid" class="badge text-bg-light text-dark ms-1">0</span>
+                      </button>
+                      <button type="button" class="btn btn-xs btn-outline-success pay-filter-btn" data-filter="paid">
+                        Lunas <span id="cnt-paid" class="badge text-bg-success ms-1">0</span>
+                      </button>
+                      <button type="button" class="btn btn-xs btn-outline-primary pay-filter-btn" data-filter="all">
+                        Semua <span id="cnt-all" class="badge text-bg-secondary ms-1">0</span>
+                      </button>
+                    </div>
+                    <input id="pay-search" type="search" class="form-control form-control-sm" placeholder="Cari kode / meja..." style="max-width: 175px;" />
+                  </div>
+                  <div class="card-body p-2">
+                    <div id="pay-orders-list" class="d-flex flex-column gap-1" style="max-height: 70vh; overflow-y: auto;">
+                      <div class="text-center text-secondary py-3 small">Memuat daftar pesanan...</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Kolom Kanan: Form Pembayaran & Pratinjau Struk -->
+              <div class="col-lg-7">
+                <div id="pay-empty-state" class="card no-print mb-0">
+                  <div class="card-body text-center text-secondary py-4 small">
+                    <i class="bi bi-receipt fs-2 d-block mb-1 opacity-50"></i>
+                    Pilih salah satu pesanan di sebelah kiri untuk memproses pembayaran atau mencetak struk.
+                  </div>
+                </div>
+
+                <div id="pay-detail-panel" class="d-none">
+                  <!-- Form Pembayaran (muncul jika belum bayar) -->
+                  <div id="pay-form-card" class="card card-outline card-success mb-2 no-print d-none">
+                    <div class="card-header py-1 px-2 d-flex justify-content-between align-items-center">
+                      <h3 class="card-title mb-0 fw-bold small">
+                        <i class="bi bi-wallet2 me-1"></i> Proses Pembayaran · <span id="pay-order-code">-</span>
+                      </h3>
+                      <span id="pay-order-status" class="badge text-bg-secondary">-</span>
+                    </div>
+                    <div class="card-body p-2">
+                      <div class="d-flex justify-content-between small mb-1">
+                        <span class="text-secondary">Subtotal Menu</span>
+                        <span id="pay-subtotal" class="fw-semibold">Rp 0</span>
+                      </div>
+                      <div class="row g-1 align-items-center mb-1">
+                        <div class="col-6">
+                          <label for="pay-discount" class="form-label small text-secondary mb-0">Diskon (Rp)</label>
+                        </div>
+                        <div class="col-6">
+                          <input id="pay-discount" type="number" min="0" step="500" value="0" class="form-control form-control-sm text-end" />
+                        </div>
+                      </div>
+                      <div class="d-flex justify-content-between align-items-center border-top border-bottom py-1 mb-2">
+                        <span class="fw-bold small">Total Tagihan</span>
+                        <span id="pay-net-total" class="fs-5 fw-bold text-primary">Rp 0</span>
+                      </div>
+
+                      <div class="mb-2">
+                        <label class="form-label small fw-semibold mb-1">Metode Pembayaran</label>
+                        <div class="row g-1">
+                          <div class="col-6 col-sm-3 d-grid">
+                            <button type="button" class="btn btn-sm btn-primary pay-method-btn" data-method="cash">
+                              <i class="bi bi-cash me-1"></i>Tunai
+                            </button>
+                          </div>
+                          <div class="col-6 col-sm-3 d-grid">
+                            <button type="button" class="btn btn-sm btn-outline-secondary pay-method-btn" data-method="qris">
+                              <i class="bi bi-qr-code me-1"></i>QRIS
+                            </button>
+                          </div>
+                          <div class="col-6 col-sm-3 d-grid">
+                            <button type="button" class="btn btn-sm btn-outline-secondary pay-method-btn" data-method="transfer">
+                              <i class="bi bi-bank me-1"></i>Transfer
+                            </button>
+                          </div>
+                          <div class="col-6 col-sm-3 d-grid">
+                            <button type="button" class="btn btn-sm btn-outline-secondary pay-method-btn" data-method="debit">
+                              <i class="bi bi-credit-card me-1"></i>Debit
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div id="pay-cash-wrap" class="mb-2">
+                        <label for="pay-cash-input" class="form-label small fw-semibold mb-1">Uang Diterima (Rp)</label>
+                        <input id="pay-cash-input" type="number" min="0" step="500" class="form-control form-control-sm fw-bold mb-1" />
+                        <div class="d-flex flex-wrap gap-1 mb-1">
+                          <button type="button" class="btn btn-xs btn-outline-primary pay-quick-cash" data-exact="1">Uang Pas</button>
+                          <button type="button" class="btn btn-xs btn-outline-secondary pay-quick-cash" data-amount="50000">Rp 50.000</button>
+                          <button type="button" class="btn btn-xs btn-outline-secondary pay-quick-cash" data-amount="100000">Rp 100.000</button>
+                          <button type="button" class="btn btn-xs btn-outline-secondary pay-quick-cash" data-amount="200000">Rp 200.000</button>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center bg-body-tertiary rounded px-2 py-1 border">
+                          <span class="small fw-semibold">Kembalian</span>
+                          <span id="pay-change-display" class="fw-bold fs-6 text-success">Rp 0</span>
+                        </div>
+                      </div>
+
+                      <div id="pay-mark-completed-wrap" class="form-check mb-2 d-none">
+                        <input class="form-check-input" type="checkbox" id="pay-mark-completed" checked />
+                        <label class="form-check-label small" for="pay-mark-completed">
+                          Sekaligus tandai pesanan <strong>Selesai</strong> (pesanan sudah siap disajikan)
+                        </label>
+                      </div>
+
+                      <div class="d-grid">
+                        <button id="btn-submit-payment" type="button" class="btn btn-sm btn-success fw-semibold">
+                          <i class="bi bi-check2-circle me-1"></i> Bayar &amp; Buat Struk
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Pratinjau & Cetak Struk -->
+                  <div id="receipt-card" class="card mb-0">
+                    <div class="card-header py-1 px-2 d-flex flex-wrap justify-content-between align-items-center gap-2 no-print">
+                      <span class="fw-semibold small"><i class="bi bi-printer me-1"></i> Pratinjau Struk</span>
+                      <div class="d-flex gap-1">
+                        <button id="btn-copy-receipt" type="button" class="btn btn-xs btn-outline-secondary">
+                          <i class="bi bi-clipboard me-1"></i> Salin Teks
+                        </button>
+                        <button id="btn-print-receipt" type="button" class="btn btn-xs btn-primary">
+                          <i class="bi bi-printer me-1"></i> Cetak Struk
+                        </button>
+                      </div>
+                    </div>
+                    <div class="card-body p-2 d-flex justify-content-center bg-body-tertiary">
+                      <div id="receipt-preview" class="receipt-paper bg-white text-dark p-2 border rounded shadow-sm"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <footer class="app-footer no-print">
+        <div class="float-end d-none d-sm-inline">Pembayaran &amp; Struk</div>
+        <strong>RestoOrder</strong> — Kasir &amp; Cetak Struk Thermal.
+      </footer>
+    </div>
+
+    <div id="app-page-modals"></div>
+    <nav id="mobile-bottom-nav" class="mobile-bottom-nav d-lg-none no-print" aria-label="Navigasi cepat aplikasi"></nav>
+
+    <script src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.17.0/browser/overlayscrollbars.browser.es6.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.9/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
+    <script src="./js/adminlte.js"></script>
+    <script type="module">
+      import { initAppShell } from './js/app-router.js';
+      void initAppShell({ pageId: 'pembayaran', allowedRoles: ['admin', 'kasir'] });
+    </script>
+  </body>
+</html>

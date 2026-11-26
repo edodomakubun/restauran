@@ -23,6 +23,8 @@
           } else if (u.role !== 'admin' && u.role !== 'kasir') {
             root.classList.add('auth-pending');
             globalThis.location.replace('./chef.html');
+          } else if (sessionStorage.getItem('restoran_welcome_splash') === '1') {
+            root.classList.add('welcome-splash-active');
           }
         } catch {
           root.classList.add('auth-pending');
@@ -30,10 +32,10 @@
         }
       })();
     </script>
-    <style>html.auth-pending body{visibility:hidden}</style>
+    <style>html.auth-pending body{visibility:hidden}html.welcome-splash-active body>.app-wrapper{opacity:0!important}</style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
     <meta name="theme-color" content="#0d6efd" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./assets/img/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./assets/img/app-icon-192.png" />
@@ -244,8 +246,15 @@
                         <span>Kasir Batal Saat Dimasak</span>
                         <span id="set-cancel" class="badge text-bg-secondary">-</span>
                       </li>
+                      <li class="list-group-item d-flex justify-content-between px-0">
+                        <span>Kasir Lihat Laporan Penjualan</span>
+                        <span id="set-report" class="badge text-bg-secondary">-</span>
+                      </li>
                     </ul>
                     <div id="admin-quick-links" class="mt-3 d-none d-grid gap-2">
+                      <a href="./laporan.html" class="btn btn-sm btn-outline-success">
+                        <i class="bi bi-bar-chart-line me-1"></i> Laporan Penjualan
+                      </a>
                       <a href="./pengaturan.html" class="btn btn-sm btn-outline-primary">
                         <i class="bi bi-sliders me-1"></i> Atur Hak Akses Kasir
                       </a>
@@ -272,17 +281,17 @@
                       <span><i class="bi bi-check-circle-fill text-success me-1"></i>Login &amp; Hak Akses Peran</span>
                       <span class="badge text-bg-success">Aktif</span>
                     </div>
-                    <div class="d-flex justify-content-between mb-2 text-secondary">
-                      <span><i class="bi bi-circle me-1"></i>Manajemen Meja</span>
-                      <span class="badge text-bg-secondary">Segera</span>
+                    <div class="d-flex justify-content-between mb-2">
+                      <span><i class="bi bi-check-circle-fill text-success me-1"></i>Manajemen Meja</span>
+                      <span class="badge text-bg-success">Aktif</span>
                     </div>
-                    <div class="d-flex justify-content-between mb-2 text-secondary">
-                      <span><i class="bi bi-circle me-1"></i>Pembayaran &amp; Cetak Struk</span>
-                      <span class="badge text-bg-secondary">Segera</span>
+                    <div class="d-flex justify-content-between mb-2">
+                      <span><i class="bi bi-check-circle-fill text-success me-1"></i>Pembayaran &amp; Cetak Struk</span>
+                      <span class="badge text-bg-success">Aktif</span>
                     </div>
-                    <div class="d-flex justify-content-between text-secondary">
-                      <span><i class="bi bi-circle me-1"></i>Laporan Penjualan</span>
-                      <span class="badge text-bg-secondary">Segera</span>
+                    <div class="d-flex justify-content-between">
+                      <span><i class="bi bi-check-circle-fill text-success me-1"></i>Laporan Penjualan</span>
+                      <span class="badge text-bg-success">Aktif</span>
                     </div>
                   </div>
                 </div>

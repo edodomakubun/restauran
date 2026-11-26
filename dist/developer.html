@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>RestoOrder | Developer</title>
+    <script>
+      (() => {
+        'use strict';
+        const root = document.documentElement;
+        const stored = (() => {
+          try { return localStorage.getItem('lte-theme'); } catch { return null; }
+        })();
+        const resolved = stored === 'dark' || stored === 'light'
+          ? stored
+          : (globalThis.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        root.setAttribute('data-bs-theme', resolved);
+        root.style.colorScheme = resolved;
+        try {
+          const u = JSON.parse(localStorage.getItem('restoran_auth_user') || 'null');
+          if (!u || !u.role) {
+            root.classList.add('auth-pending');
+            globalThis.location.replace('./login.html');
+          }
+        } catch {
+          root.classList.add('auth-pending');
+          globalThis.location.replace('./login.html');
+        }
+      })();
+    </script>
+    <style>html.auth-pending body{visibility:hidden}</style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <meta name="theme-color" content="#0d6efd" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./assets/img/app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./assets/img/app-icon-192.png" />
+    <link rel="preload" href="./css/adminlte.css" as="style" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@fontsource/source-sans-3@5.3.1/index.css"
+      crossorigin="anonymous"
+      media="print"
+      onload="this.media = 'all'"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.17.0/styles/overlayscrollbars.min.css"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.2/font/bootstrap-icons.min.css"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="./css/adminlte.css" />
+    <link rel="stylesheet" href="./css/restaurant.css" />
+  </head>
+  <body class="layout-fixed fixed-header sidebar-expand-lg bg-body-tertiary">
+    <div class="app-wrapper">
+      <nav class="app-header navbar navbar-expand bg-body">
+        <div class="container-fluid">
+          <ul class="navbar-nav">
+            <li class="nav-item">
+              <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button" aria-label="Alihkan bilah sisi">
+                <i class="bi bi-list"></i>
+              </a>
+            </li>
+          </ul>
+          <ul class="navbar-nav ms-auto align-items-center gap-1 gap-sm-2">
+            <li class="nav-item form-check form-switch mb-0 me-1 d-flex align-items-center gap-1">
+              <input class="form-check-input mt-0" type="checkbox" id="sound-toggle" checked aria-label="Suara notifikasi" />
+              <label class="form-check-label small" for="sound-toggle">
+                <i class="bi bi-volume-up"></i><span class="d-none d-sm-inline"> Suara</span>
+              </label>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" data-lte-toggle="fullscreen" aria-label="Layar penuh" title="Layar penuh">
+                <i data-lte-icon="maximize" class="bi bi-arrows-fullscreen"></i>
+                <i data-lte-icon="minimize" class="bi bi-fullscreen-exit d-none"></i>
+              </a>
+            </li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-label="Ubah tema">
+                <i class="bi bi-circle-half"></i>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><button class="dropdown-item" type="button" data-bs-theme-value="light"><i class="bi bi-sun-fill me-2"></i>Terang</button></li>
+                <li><button class="dropdown-item" type="button" data-bs-theme-value="dark"><i class="bi bi-moon-stars-fill me-2"></i>Gelap</button></li>
+                <li><button class="dropdown-item" type="button" data-bs-theme-value="auto"><i class="bi bi-circle-half me-2"></i>Otomatis</button></li>
+              </ul>
+            </li>
+            <li class="nav-item d-flex align-items-center gap-1 gap-sm-2 ps-2 border-start">
+              <span id="nav-user-role" class="badge text-bg-secondary">-</span>
+              <span id="nav-user-name" class="fw-semibold small d-none d-md-inline">-</span>
+              <button id="btn-logout" type="button" class="btn btn-sm btn-outline-danger" aria-label="Keluar">
+                <i class="bi bi-box-arrow-right"></i> <span class="d-none d-sm-inline">Keluar</span>
+              </button>
+            </li>
+          </ul>
+        </div>
+      </nav>
+
+      <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
+        <div class="sidebar-brand">
+          <a href="./index.html" class="brand-link">
+            <img src="./assets/img/app-icon.svg" alt="Logo RestoOrder" class="brand-image opacity-90 shadow rounded" />
+            <span class="brand-text fw-light"><b>Resto</b>Order</span>
+          </a>
+        </div>
+        <div class="sidebar-wrapper">
+          <nav class="mt-2" aria-label="Navigasi restoran">
+            <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" data-accordion="false" id="navigation"></ul>
+          </nav>
+        </div>
+      </aside>
+
+      <main class="app-main">
+        <div class="app-content-header">
+          <div class="container-fluid">
+            <h1 class="mb-0 fs-3"><i class="bi bi-person-workspace text-primary me-2"></i>Informasi Developer</h1>
+          </div>
+        </div>
+
+        <div class="app-content">
+          <div class="container-fluid">
+            <div class="row">
+              <div class="col-md-8 col-lg-6">
+                <div class="card card-outline card-primary shadow-sm">
+                  <div class="card-body p-4">
+                    <div class="d-flex align-items-center gap-3 pb-3 mb-3 border-bottom">
+                      <div class="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center flex-shrink-0" style="width: 56px; height: 56px; font-size: 1.5rem;">
+                        <i class="bi bi-person-badge-fill"></i>
+                      </div>
+                      <div class="min-w-0">
+                        <h2 class="h5 fw-bold mb-1">Edward Domakubun, S.Pd</h2>
+                        <div class="small text-secondary">Pengembang Aplikasi RestoOrder · Dapur Laris Manis</div>
+                      </div>
+                    </div>
+
+                    <div class="list-group list-group-flush small">
+                      <div class="list-group-item px-0 d-flex justify-content-between align-items-center gap-2">
+                        <span class="text-secondary"><i class="bi bi-telephone-fill text-primary me-2"></i>Telepon / WhatsApp</span>
+                        <div class="d-flex align-items-center gap-2">
+                          <a href="tel:082238128126" class="fw-semibold text-decoration-none">082238128126</a>
+                          <a href="https://wa.me/6282238128126" target="_blank" rel="noopener noreferrer" class="btn btn-xs btn-outline-success">
+                            <i class="bi bi-whatsapp me-1"></i>WhatsApp
+                          </a>
+                        </div>
+                      </div>
+                      <div class="list-group-item px-0 d-flex justify-content-between align-items-center gap-2">
+                        <span class="text-secondary"><i class="bi bi-envelope-fill text-danger me-2"></i>Email</span>
+                        <a href="mailto:edo.domakubun@gmail.com" class="fw-semibold text-decoration-none text-break">edo.domakubun@gmail.com</a>
+                      </div>
+                      <div class="list-group-item px-0 d-flex justify-content-between align-items-center gap-2">
+                        <span class="text-secondary"><i class="bi bi-globe2 text-info me-2"></i>Website</span>
+                        <a href="https://edomakubun.web.id" target="_blank" rel="noopener noreferrer" class="fw-semibold text-decoration-none">edomakubun.web.id</a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <footer class="app-footer">
+        <div class="float-end d-none d-sm-inline">Informasi Developer</div>
+        <strong>RestoOrder</strong> — Dapur Laris Manis.
+      </footer>
+    </div>
+
+    <div id="app-page-modals"></div>
+    <nav id="mobile-bottom-nav" class="mobile-bottom-nav d-lg-none" aria-label="Navigasi cepat aplikasi"></nav>
+
+    <script src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.17.0/browser/overlayscrollbars.browser.es6.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.9/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
+    <script src="./js/adminlte.js"></script>
+    <script type="module">
+      import { initAppShell } from './js/app-router.js';
+      void initAppShell({ pageId: 'developer', allowedRoles: ['admin', 'kasir', 'chef'] });
+    </script>
+  </body>
+</html>

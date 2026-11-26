@@ -20,6 +20,8 @@
           if (!u || !['admin', 'kasir', 'chef'].includes(u.role)) {
             root.classList.add('auth-pending');
             globalThis.location.replace('./login.html');
+          } else if (sessionStorage.getItem('restoran_welcome_splash') === '1') {
+            root.classList.add('welcome-splash-active');
           }
         } catch {
           root.classList.add('auth-pending');
@@ -27,10 +29,10 @@
         }
       })();
     </script>
-    <style>html.auth-pending body{visibility:hidden}</style>
+    <style>html.auth-pending body{visibility:hidden}html.welcome-splash-active body>.app-wrapper{opacity:0!important}</style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
     <meta name="theme-color" content="#0d6efd" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./assets/img/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./assets/img/app-icon-192.png" />

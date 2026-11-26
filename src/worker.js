@@ -3,6 +3,7 @@ import { FirebaseAdminRest } from './firebase-admin-rest.js';
 import {
   DEFAULT_MENU_ITEMS,
   DEFAULT_SETTINGS,
+  DEFAULT_TABLES,
   getSharedLocalStore,
 } from './local-dev-store.js';
 
@@ -224,6 +225,10 @@ function createFirestoreAdapter(env, fetchImpl, userBearerToken = null) {
           patch.kasirCanCancelWhileCooking !== undefined
             ? Boolean(patch.kasirCanCancelWhileCooking)
             : Boolean(curr.kasirCanCancelWhileCooking),
+        kasirCanViewReport:
+          patch.kasirCanViewReport !== undefined
+            ? Boolean(patch.kasirCanViewReport)
+            : Boolean(curr.kasirCanViewReport),
         updatedAt: new Date().toISOString(),
       };
       await fb.setDocument('settings', 'restaurant', next);
@@ -288,7 +293,7 @@ function createFirestoreAdapter(env, fetchImpl, userBearerToken = null) {
     },
 
     async createOrder(order) {
-      const existing = await fb.listDocuments('orders');
+      const existing = await fb.listRecentOrders(40);
       const todayPrefix = formatOrderCode(0).slice(0, 13);
       let maxSeq = 0;
       for (const o of existing) {
@@ -313,6 +318,66 @@ function createFirestoreAdapter(env, fetchImpl, userBearerToken = null) {
       const curr = await fb.getDocument('orders', id);
       if (!curr) return false;
       await fb.deleteDocument('orders', id);
+      return true;
+    },
+
+    async deleteAllOrders() {
+      const docs = await fb.listDocuments('orders', 500);
+      if (docs.length === 0) return 0;
+      return fb.deleteDocumentsBatch('orders', docs.map((d) => d.id));
+    },
+
+    async listTables() {
+      const items = await fb.listDocuments('tables');
+      if (items.length === 0) {
+        const now = new Date().toISOString();
+        const seeded = [];
+        for (const tbl of DEFAULT_TABLES) {
+          const created = await fb.createDocument(
+            'tables',
+            {
+              number: tbl.number,
+              area: tbl.area,
+              capacity: tbl.capacity,
+              status: tbl.status,
+              note: '',
+              createdAt: now,
+              updatedAt: now,
+            },
+            tbl.id
+          );
+          seeded.push(created);
+        }
+        return seeded;
+      }
+      return items.sort((a, b) => String(a.number).localeCompare(String(b.number), 'id', { numeric: true }));
+    },
+
+    async createTable(table) {
+      const now = new Date().toISOString();
+      return fb.createDocument('tables', { ...table, createdAt: now, updatedAt: now });
+    },
+
+    async updateTable(id, patch) {
+      const curr = await fb.getDocument('tables', id);
+      if (!curr) return null;
+      const next = {
+        number: patch.number ?? curr.number,
+        area: patch.area ?? curr.area,
+        capacity: patch.capacity ?? curr.capacity,
+        status: patch.status ?? curr.status,
+        note: patch.note ?? curr.note ?? '',
+        updatedBy: patch.updatedBy ?? curr.updatedBy ?? '',
+        createdAt: curr.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      return fb.setDocument('tables', id, next);
+    },
+
+    async deleteTable(id) {
+      const curr = await fb.getDocument('tables', id);
+      if (!curr) return false;
+      await fb.deleteDocument('tables', id);
       return true;
     },
   };
@@ -341,6 +406,11 @@ function createLocalAdapter(store) {
     },
     updateOrder: async (id, patch) => store.updateOrder(id, patch),
     deleteOrder: async (id) => store.deleteOrder(id),
+    deleteAllOrders: async () => store.deleteAllOrders(),
+    listTables: async () => store.listTables(),
+    createTable: async (table) => store.createTable(table),
+    updateTable: async (id, patch) => store.updateTable(id, patch),
+    deleteTable: async (id) => store.deleteTable(id),
   };
 }
 
@@ -471,6 +541,7 @@ export function createWorkerHandler(options = {}) {
             'kasirCanDeleteOrder',
             'kasirCanEditWhileCooking',
             'kasirCanCancelWhileCooking',
+            'kasirCanViewReport',
           ]) {
             if (body[key] !== undefined) patch[key] = Boolean(body[key]);
           }
@@ -551,6 +622,96 @@ export function createWorkerHandler(options = {}) {
           const ok = await adapter.deleteMenu(menuId);
           if (!ok) return errorResponse('Menu tidak ditemukan.', 404, 'NOT_FOUND');
           return jsonResponse({ deleted: true, id: menuId });
+        }
+      }
+
+      // GET / POST /api/tables
+      if (path === '/api/tables') {
+        if (method === 'GET') {
+          const tables = await adapter.listTables();
+          return jsonResponse({ tables });
+        }
+        if (method === 'POST') {
+          if (currentUser.role !== 'admin') {
+            return errorResponse('Hanya Admin yang dapat menambah meja.', 403, 'FORBIDDEN');
+          }
+          const body = await readJson(request);
+          if (!body) return errorResponse('Body JSON tidak valid.', 400);
+          const number = String(body.number || '').trim().slice(0, 20);
+          const area = String(body.area || 'Utama').trim().slice(0, 40) || 'Utama';
+          const capacity = Number(body.capacity ?? 4);
+          const status = String(body.status || 'available').trim();
+          if (!number) return errorResponse('Nomor meja wajib diisi.', 400);
+          if (!Number.isInteger(capacity) || capacity < 1 || capacity > 50) {
+            return errorResponse('Kapasitas meja harus antara 1 dan 50 kursi.', 400);
+          }
+          if (!['available', 'reserved', 'cleaning'].includes(status)) {
+            return errorResponse('Status meja tidak valid.', 400);
+          }
+          const created = await adapter.createTable({
+            number,
+            area,
+            capacity,
+            status,
+            note: String(body.note || '').trim().slice(0, 200),
+            updatedBy: currentUser.displayName || currentUser.email,
+          });
+          return jsonResponse({ table: created }, 201);
+        }
+      }
+
+      const tableMatch = path.match(/^\/api\/tables\/([^/]+)$/);
+      if (tableMatch) {
+        const tableId = decodeURIComponent(tableMatch[1]);
+        if (method === 'PUT') {
+          if (currentUser.role !== 'admin' && currentUser.role !== 'kasir') {
+            return errorResponse('Hanya Admin atau Kasir yang dapat mengubah meja.', 403, 'FORBIDDEN');
+          }
+          const body = await readJson(request);
+          if (!body) return errorResponse('Body JSON tidak valid.', 400);
+          if (
+            currentUser.role !== 'admin' &&
+            (body.number !== undefined || body.area !== undefined || body.capacity !== undefined)
+          ) {
+            return errorResponse('Hanya Admin yang dapat mengubah nomor, area, atau kapasitas meja.', 403, 'FORBIDDEN');
+          }
+          const patch = { updatedBy: currentUser.displayName || currentUser.email };
+          if (body.number !== undefined) {
+            const n = String(body.number).trim().slice(0, 20);
+            if (!n) return errorResponse('Nomor meja tidak boleh kosong.', 400);
+            patch.number = n;
+          }
+          if (body.area !== undefined) {
+            patch.area = String(body.area).trim().slice(0, 40) || 'Utama';
+          }
+          if (body.capacity !== undefined) {
+            const c = Number(body.capacity);
+            if (!Number.isInteger(c) || c < 1 || c > 50) {
+              return errorResponse('Kapasitas meja harus antara 1 dan 50 kursi.', 400);
+            }
+            patch.capacity = c;
+          }
+          if (body.status !== undefined) {
+            const s = String(body.status).trim();
+            if (!['available', 'reserved', 'cleaning'].includes(s)) {
+              return errorResponse('Status meja tidak valid.', 400);
+            }
+            patch.status = s;
+          }
+          if (body.note !== undefined) {
+            patch.note = String(body.note).trim().slice(0, 200);
+          }
+          const updated = await adapter.updateTable(tableId, patch);
+          if (!updated) return errorResponse('Meja tidak ditemukan.', 404, 'NOT_FOUND');
+          return jsonResponse({ table: updated });
+        }
+        if (method === 'DELETE') {
+          if (currentUser.role !== 'admin') {
+            return errorResponse('Hanya Admin yang dapat menghapus meja.', 403, 'FORBIDDEN');
+          }
+          const ok = await adapter.deleteTable(tableId);
+          if (!ok) return errorResponse('Meja tidak ditemukan.', 404, 'NOT_FOUND');
+          return jsonResponse({ deleted: true, id: tableId });
         }
       }
 
@@ -679,6 +840,13 @@ export function createWorkerHandler(options = {}) {
             cancelReason: '',
             isEdited: false,
             totalAmount: parsed.totalAmount,
+            paymentStatus: 'unpaid',
+            paymentMethod: '',
+            discountAmount: 0,
+            paidAmount: 0,
+            changeAmount: 0,
+            paidAt: '',
+            paidBy: '',
             items: initialItems,
             createdBy: currentUser.displayName || currentUser.email,
             createdByUid: currentUser.uid,
@@ -688,6 +856,78 @@ export function createWorkerHandler(options = {}) {
           });
           return jsonResponse({ order: created, revision: await adapter.getRevision() }, 201);
         }
+
+        if (method === 'DELETE') {
+          if (currentUser.role !== 'admin') {
+            return errorResponse('Hanya Admin yang dapat menghapus semua pesanan di database.', 403, 'FORBIDDEN');
+          }
+          const deletedCount = await adapter.deleteAllOrders();
+          return jsonResponse({ deleted: true, deletedCount, revision: await adapter.getRevision() });
+        }
+      }
+
+      const orderPayMatch = path.match(/^\/api\/orders\/([^/]+)\/pay$/);
+      if (orderPayMatch && method === 'POST') {
+        if (currentUser.role !== 'admin' && currentUser.role !== 'kasir') {
+          return errorResponse('Hanya Admin atau Kasir yang dapat memproses pembayaran.', 403, 'FORBIDDEN');
+        }
+        const orderId = decodeURIComponent(orderPayMatch[1]);
+        const body = await readJson(request);
+        if (!body) return errorResponse('Body JSON tidak valid.', 400);
+
+        const paymentMethod = String(body.paymentMethod || '').trim().toLowerCase();
+        if (!['cash', 'qris', 'transfer', 'debit'].includes(paymentMethod)) {
+          return errorResponse('Metode pembayaran harus cash, qris, transfer, atau debit.', 400);
+        }
+
+        const existing = await adapter.getOrder(orderId);
+        if (!existing) return errorResponse('Pesanan tidak ditemukan.', 404, 'NOT_FOUND');
+        if (existing.status === 'cancelled') {
+          return errorResponse('Pesanan yang dibatalkan tidak dapat dibayar.', 400);
+        }
+
+        const totalAmount = Number(existing.totalAmount || 0);
+        const rawDiscount = Number(body.discountAmount ?? 0);
+        if (!Number.isFinite(rawDiscount) || rawDiscount < 0 || rawDiscount > totalAmount) {
+          return errorResponse('Diskon tidak valid atau melebihi total tagihan.', 400);
+        }
+        const discountAmount = Math.round(rawDiscount);
+        const netTotal = Math.max(0, totalAmount - discountAmount);
+
+        let paidAmount = netTotal;
+        let changeAmount = 0;
+        if (paymentMethod === 'cash') {
+          const rawPaid = Number(body.paidAmount ?? 0);
+          if (!Number.isFinite(rawPaid) || rawPaid < netTotal) {
+            return errorResponse('Nominal uang diterima kurang dari total tagihan.', 400);
+          }
+          paidAmount = Math.round(rawPaid);
+          changeAmount = Math.max(0, paidAmount - netTotal);
+        }
+
+        const now = new Date().toISOString();
+        const patch = {
+          paymentStatus: 'paid',
+          paymentMethod,
+          discountAmount,
+          paidAmount,
+          changeAmount,
+          paidAt: now,
+          paidBy: currentUser.displayName || currentUser.email,
+          updatedBy: currentUser.displayName || currentUser.email,
+          updatedAt: now,
+        };
+
+        if (body.markCompleted === true && existing.status === 'ready') {
+          patch.status = 'completed';
+          const currSec = resolveSectionStatuses(existing);
+          if (currSec.foodStatus !== 'none') patch.foodStatus = 'completed';
+          if (currSec.drinkStatus !== 'none') patch.drinkStatus = 'completed';
+          patch.items = currSec.items.map((it) => ({ ...it, itemStatus: 'completed' }));
+        }
+
+        const updated = await adapter.updateOrder(orderId, patch);
+        return jsonResponse({ order: updated, revision: await adapter.getRevision() });
       }
 
       const orderStatusMatch = path.match(/^\/api\/orders\/([^/]+)\/status$/);
@@ -727,7 +967,7 @@ export function createWorkerHandler(options = {}) {
           }
         }
 
-        const settings = await adapter.getSettings();
+        const settings = currentUser.role === 'kasir' ? await adapter.getSettings() : {};
 
         if (nextStatus === 'cancelled') {
           if (currentUser.role !== 'admin' && currentUser.role !== 'kasir') {
@@ -816,7 +1056,7 @@ export function createWorkerHandler(options = {}) {
           if (currentUser.role !== 'admin' && currentUser.role !== 'kasir') {
             return errorResponse('Hanya Kasir atau Admin yang dapat mengedit pesanan.', 403, 'FORBIDDEN');
           }
-          const settings = await adapter.getSettings();
+          const settings = currentUser.role === 'kasir' ? await adapter.getSettings() : {};
           if (currentUser.role === 'kasir') {
             if (existing.status === 'ready' || existing.status === 'completed' || existing.status === 'cancelled') {
               return errorResponse(
@@ -854,14 +1094,28 @@ export function createWorkerHandler(options = {}) {
 
           const prevSections = resolveSectionStatuses(existing);
           const defaultNewItemStatus = existing.status === 'cooking' ? 'cooking' : 'pending';
-          const prevStatusByKey = new Map();
+          const prevStatusByNoteKey = new Map();
+          const prevStatusByNameKey = new Map();
+          const pushQueue = (map, k, val) => {
+            if (!map.has(k)) map.set(k, []);
+            map.get(k).push(val);
+          };
           for (const prevIt of prevSections.items) {
-            const k = `${prevIt.category}|${String(prevIt.name || '').toLowerCase()}`;
-            if (!prevStatusByKey.has(k)) prevStatusByKey.set(k, prevIt.itemStatus);
+            const baseKey = `${prevIt.category}|${String(prevIt.name || '').toLowerCase()}`;
+            const noteKey = `${baseKey}|${String(prevIt.note || '').trim().toLowerCase()}`;
+            pushQueue(prevStatusByNoteKey, noteKey, prevIt.itemStatus);
+            pushQueue(prevStatusByNameKey, baseKey, prevIt.itemStatus);
           }
+          const shiftQueue = (map, k) => {
+            const q = map.get(k);
+            return q && q.length > 0 ? q.shift() : null;
+          };
           const nextItems = parsed.items.map((it) => {
-            const k = `${it.category}|${String(it.name || '').toLowerCase()}`;
-            const preserved = VALID_STATUSES.has(it.itemStatus) ? it.itemStatus : prevStatusByKey.get(k);
+            const baseKey = `${it.category}|${String(it.name || '').toLowerCase()}`;
+            const noteKey = `${baseKey}|${String(it.note || '').trim().toLowerCase()}`;
+            const preserved = VALID_STATUSES.has(it.itemStatus)
+              ? it.itemStatus
+              : shiftQueue(prevStatusByNoteKey, noteKey) || shiftQueue(prevStatusByNameKey, baseKey);
             return { ...it, itemStatus: VALID_STATUSES.has(preserved) ? preserved : defaultNewItemStatus };
           });
           const derived = resolveSectionStatuses({ ...existing, items: nextItems });
@@ -890,7 +1144,7 @@ export function createWorkerHandler(options = {}) {
             return errorResponse('Chef tidak dapat menghapus pesanan.', 403, 'FORBIDDEN');
           }
           if (currentUser.role === 'kasir') {
-            const settings = await adapter.getSettings();
+            const settings = currentUser.role === 'kasir' ? await adapter.getSettings() : {};
             if (!settings.kasirCanDeleteOrder) {
               return errorResponse(
                 'Admin belum mengizinkan Kasir menghapus pesanan permanen. Gunakan fitur Batalkan Pesanan atau minta izin Admin.',

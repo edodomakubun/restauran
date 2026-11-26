@@ -1,20 +1,19 @@
-// Modul halaman Kasir & Kelola Pesanan (pesanan.html) dengan Wizard 3 Langkah AdminLTE 4,
-// Form Menu Manual Collapsible (CardWidget), dan Paginasi Menu (> 10 item).
+// Modul halaman Kasir Buat & Edit Pesanan (pesanan.html) dengan Wizard 3 Langkah AdminLTE 4,
+// Form Menu Manual Collapsible, dan Paginasi Menu.
 import {
   apiFetch,
   el,
   formatRupiah,
-  formatTimeShort,
   initCollapsibleCard,
   initCollapsiblePanel,
   renderPagination,
   showToast,
-  statusLabel,
+  upsertOrderInStore,
 } from '../app-client.js';
 
-const ORDERS_COLLAPSE_KEY = 'restoran_orders_collapsed';
+const WIZARD_COLLAPSE_KEY = 'restoran_wizard_collapsed';
 const CUSTOM_MENU_COLLAPSE_KEY = 'restoran_custom_menu_collapsed';
-const MENU_PAGE_SIZE = 10;
+const MENU_PAGE_SIZE = 12;
 const SPICE_TAGS = ['Tidak Pedas', 'Sedang', 'Pedas', 'Extra Pedas'];
 const SWEET_TAGS = ['Normal Gula', 'Kurang Gula', 'Tanpa Gula'];
 
@@ -72,63 +71,22 @@ function toggleQuickNoteTag(currentNote, tag, group) {
   return nextTokens.join(', ');
 }
 
-function getSectionStatuses(ord) {
-  const items = Array.isArray(ord?.items) ? ord.items : [];
-  const hasFood = items.some((i) => i.category === 'makanan');
-  const hasDrink = items.some((i) => i.category === 'minuman');
-  const fallback = ord?.status || 'pending';
-  return {
-    hasFood,
-    hasDrink,
-    foodStatus: !hasFood ? 'none' : ord?.foodStatus || fallback,
-    drinkStatus: !hasDrink ? 'none' : ord?.drinkStatus || fallback,
-  };
-}
-
-function kasirOrderPriorityRank(ord) {
-  if (ord.status === 'completed') return 0;
-  if (ord.status === 'ready') return 1;
-  const sec = getSectionStatuses(ord);
-  if (sec.foodStatus === 'ready' || sec.drinkStatus === 'ready') return 2;
-  if (ord.status === 'cooking') return 3;
-  if (ord.status === 'pending') return 4;
-  return 5;
-}
-
-function sortKasirOrders(list) {
-  return [...list].sort((a, b) => {
-    const rankDiff = kasirOrderPriorityRank(a) - kasirOrderPriorityRank(b);
-    if (rankDiff !== 0) return rankDiff;
-    const tA = a.updatedAt || a.createdAt || '';
-    const tB = b.updatedAt || b.createdAt || '';
-    return tB.localeCompare(tA);
-  });
-}
-
 export function mount(ctx) {
-  const { session, signal, subscribeStore } = ctx;
+  const { signal, navigate, subscribeStore } = ctx;
   let menuList = [];
   let menuReady = false;
   let menuPage = 1;
   let ordersList = [];
-  let ordersReady = false;
-  let settings = session.settings || {};
   let catFilter = 'all';
   let serviceType = 'dine_in';
   let editingOrderId = null;
+  let handledEditParam = false;
   let cart = [];
   const expandedNoteItems = new WeakSet();
   let currentStep = 0;
-  let pendingCancelOrder = null;
-  let pendingDeleteOrder = null;
 
-  const cancelModalEl = document.getElementById('cancelModal');
-  const deleteModalEl = document.getElementById('deleteModal');
-  const cancelModal = cancelModalEl ? new globalThis.bootstrap.Modal(cancelModalEl) : null;
-  const deleteModal = deleteModalEl ? new globalThis.bootstrap.Modal(deleteModalEl) : null;
-
-  // Inisialisasi panel collapsible (Daftar Pesanan pakai CardWidget, Tulis Menu Manual pakai Collapse datar tanpa card)
-  initCollapsibleCard('orders-list-card', ORDERS_COLLAPSE_KEY, globalThis.innerWidth < 768, signal);
+  // Inisialisasi panel collapsible (Wizard pakai CardWidget, Tulis Menu Manual pakai Collapse datar tanpa card)
+  initCollapsibleCard('order-wizard-card', WIZARD_COLLAPSE_KEY, false, signal);
   initCollapsiblePanel(
     'custom-menu-collapse',
     'btn-toggle-custom-menu',
@@ -323,11 +281,32 @@ export function mount(ctx) {
       return;
     }
 
+    const itemKey = (it) => `${it.category}|${String(it.name || '').trim().toLowerCase()}`;
+    const totalByKey = new Map();
+    for (const it of cart) {
+      const k = itemKey(it);
+      totalByKey.set(k, (totalByKey.get(k) || 0) + 1);
+    }
+    const seenByKey = new Map();
+
     cart.forEach((item, idx) => {
+      const k = itemKey(item);
+      const countForKey = totalByKey.get(k) || 1;
+      const variantNum = (seenByKey.get(k) || 0) + 1;
+      seenByKey.set(k, variantNum);
+
       const catPill =
         item.category === 'makanan'
           ? el('span', { className: 'badge text-bg-warning me-1', textContent: 'Makanan' })
           : el('span', { className: 'badge text-bg-info me-1', textContent: 'Minuman' });
+      const variantBadge =
+        countForKey > 1
+          ? el('span', {
+              className: 'badge text-bg-light text-secondary border ms-1',
+              textContent: `#${variantNum}`,
+              title: `Varian ke-${variantNum} untuk ${item.name}`,
+            })
+          : null;
 
       const isOptsOpen = expandedNoteItems.has(item);
       const groups = getQuickNoteGroups(item);
@@ -427,16 +406,49 @@ export function mount(ctx) {
         trayEl,
       ]);
 
+      const splitOrVariantBtn = el(
+        'button',
+        {
+          type: 'button',
+          className: `btn btn-sm ${item.qty > 1 ? 'btn-outline-primary' : 'btn-outline-secondary'}`,
+          title:
+            item.qty > 1
+              ? 'Pisah 1 porsi ke baris baru agar bisa diberi catatan/level pedas berbeda'
+              : 'Tambah 1 porsi lagi dengan catatan/opsi berbeda',
+          onClick: () => {
+            if (cart[idx].qty > 1) {
+              cart[idx].qty -= 1;
+            }
+            const variantItem = {
+              menuItemId: item.menuItemId || null,
+              name: item.name,
+              category: item.category,
+              qty: 1,
+              price: Number(item.price || 0),
+              note: '',
+            };
+            expandedNoteItems.add(variantItem);
+            cart.splice(idx + 1, 0, variantItem);
+            renderCart();
+          },
+        },
+        [
+          el('i', { className: `bi ${item.qty > 1 ? 'bi-scissors' : 'bi-plus-square-dotted'} me-1` }),
+          item.qty > 1 ? 'Pisah' : '+ Varian',
+        ]
+      );
+
       const row = el('div', { className: 'list-group-item py-1 px-2' }, [
         el('div', { className: 'd-flex flex-wrap justify-content-between align-items-center gap-1' }, [
           el('div', { className: 'flex-grow-1 min-w-0' }, [
-            el('div', { className: 'fw-semibold small text-break' }, [catPill, item.name]),
+            el('div', { className: 'fw-semibold small text-break' }, [catPill, item.name, variantBadge]),
             el('div', {
               className: 'text-secondary small',
               textContent: `${formatRupiah(item.price)} × ${item.qty} = ${formatRupiah(item.price * item.qty)}`,
             }),
           ]),
           el('div', { className: 'd-flex align-items-center gap-1 flex-shrink-0 ms-auto' }, [
+            splitOrVariantBtn,
             el('div', { className: 'input-group input-group-sm cart-qty-box', style: 'width: 96px;' }, [
               el('button', {
                 type: 'button',
@@ -518,10 +530,10 @@ export function mount(ctx) {
 
     if (!menuReady && menuList.length === 0) {
       footerEl?.classList.add('d-none');
-      for (let i = 0; i < 8; i += 1) {
+      for (let i = 0; i < 12; i += 1) {
         grid.appendChild(
-          el('div', { className: 'col-6 col-sm-4 col-xl-3' }, [
-            el('div', { className: 'border rounded p-1 px-2 placeholder-glow mb-0 bg-body' }, [
+          el('div', { className: 'col-6 col-sm-4 col-md-3 col-xl-2' }, [
+            el('div', { className: 'border rounded p-1 placeholder-glow mb-0 bg-body' }, [
               el('span', { className: 'placeholder col-5 mb-1 rounded' }),
               el('span', { className: 'placeholder col-10 mb-1 rounded' }),
               el('span', { className: 'placeholder col-6 rounded' }),
@@ -578,7 +590,7 @@ export function mount(ctx) {
         {
           type: 'button',
           title: m.name,
-          className: `menu-pick-tile w-100 h-100 text-start border rounded p-1 px-2 bg-body d-flex flex-column justify-content-between${avail ? '' : ' menu-unavailable'}`,
+          className: `menu-pick-tile w-100 h-100 text-start border rounded p-1 bg-body d-flex flex-column justify-content-between${avail ? '' : ' menu-unavailable'}`,
           onClick: () => {
             if (!avail) {
               showToast(`Menu "${m.name}" sedang ditandai habis.`, 'warning');
@@ -597,7 +609,7 @@ export function mount(ctx) {
           el('div', { className: 'd-flex justify-content-between align-items-center gap-1 w-100 mb-1' }, [
             catBadge,
             avail
-              ? el('span', { className: 'text-primary small fw-bold' }, [el('i', { className: 'bi bi-plus-circle-fill' })])
+              ? el('span', { className: 'text-primary small fw-bold', style: 'font-size: 0.72rem;' }, [el('i', { className: 'bi bi-plus-circle-fill' })])
               : el('span', { className: 'badge text-bg-secondary', textContent: 'Habis' }),
           ]),
           el('div', { className: 'fw-semibold menu-pick-title text-truncate w-100', textContent: m.name }),
@@ -607,7 +619,7 @@ export function mount(ctx) {
           }),
         ]
       );
-      grid.appendChild(el('div', { className: 'col-6 col-sm-4 col-xl-3' }, [card]));
+      grid.appendChild(el('div', { className: 'col-6 col-sm-4 col-md-3 col-xl-2' }, [card]));
     }
   };
 
@@ -627,6 +639,9 @@ export function mount(ctx) {
     }
     renderCart();
     showStep(0);
+    if (globalThis.location.search.includes('edit=')) {
+      history.replaceState(null, '', './pesanan.html');
+    }
   };
 
   const loadOrderIntoEditor = (ord) => {
@@ -646,305 +661,11 @@ export function mount(ctx) {
     }
     renderCart();
     showStep(0);
+    const wizardCard = document.getElementById('order-wizard-card');
+    if (wizardCard?.classList.contains('collapsed-card')) {
+      document.getElementById('btn-toggle-wizard')?.click();
+    }
     globalThis.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const canKasirEdit = (ord) => {
-    if (session.user.role === 'admin') return ord.status !== 'cancelled' && ord.status !== 'completed';
-    if (ord.status === 'pending') return true;
-    if (ord.status === 'cooking') return Boolean(settings.kasirCanEditWhileCooking);
-    return false;
-  };
-
-  const canKasirCancel = (ord) => {
-    if (ord.status === 'cancelled' || ord.status === 'completed') return false;
-    if (session.user.role === 'admin') return ord.status !== 'ready';
-    if (ord.status === 'pending') return true;
-    if (ord.status === 'cooking') return Boolean(settings.kasirCanCancelWhileCooking);
-    return false;
-  };
-
-  const canKasirDelete = () => session.user.role === 'admin' || Boolean(settings.kasirCanDeleteOrder);
-
-  const renderOrdersTable = () => {
-    const countBadge = document.getElementById('orders-count-badge');
-    const readyBadge = document.getElementById('orders-ready-badge');
-    if (countBadge) countBadge.textContent = String(ordersList.length);
-    if (readyBadge) {
-      const readyCount = ordersList.filter((o) => o.status === 'ready').length;
-      readyBadge.textContent = `${readyCount} Siap`;
-      readyBadge.classList.toggle('d-none', readyCount === 0);
-    }
-
-    const tbody = document.getElementById('orders-table-body');
-    const mobileList = document.getElementById('orders-mobile-list');
-    if (!tbody || !mobileList) return;
-    tbody.replaceChildren();
-    mobileList.replaceChildren();
-
-    if (!ordersReady && ordersList.length === 0) {
-      tbody.appendChild(
-        el('tr', { className: 'placeholder-glow' }, [
-          el('td', { colSpan: 6 }, [el('span', { className: 'placeholder col-12 rounded' })]),
-        ])
-      );
-      mobileList.appendChild(
-        el('div', { className: 'card border placeholder-glow mb-0' }, [
-          el('div', { className: 'card-body p-2' }, [el('span', { className: 'placeholder col-10 rounded' })]),
-        ])
-      );
-      return;
-    }
-
-    const statusFilter = document.getElementById('orders-status-filter')?.value || 'all';
-    const q = (document.getElementById('orders-search')?.value || '').trim().toLowerCase();
-
-    const filtered = sortKasirOrders(
-      ordersList.filter((o) => {
-        if (statusFilter !== 'all' && o.status !== statusFilter) return false;
-        if (q) {
-          const hay = `${o.orderCode} ${o.customerName} ${o.tableNumber}`.toLowerCase();
-          if (!hay.includes(q)) return false;
-        }
-        return true;
-      })
-    );
-
-    if (filtered.length === 0) {
-      tbody.appendChild(
-        el('tr', {}, [
-          el('td', {
-            colSpan: 6,
-            className: 'text-center text-secondary py-4',
-            textContent: 'Tidak ada pesanan yang cocok.',
-          }),
-        ])
-      );
-      mobileList.appendChild(
-        el('div', {
-          className: 'text-center text-secondary py-4 small',
-          textContent: 'Tidak ada pesanan yang cocok.',
-        })
-      );
-      return;
-    }
-
-    const completeSectionOrOrder = async (ord, section) => {
-      try {
-        await apiFetch(`/api/orders/${ord.id}/status`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status: 'completed', section }),
-        });
-        const label = section === 'food' ? 'Makanan ' : section === 'drink' ? 'Minuman ' : 'Pesanan ';
-        showToast(`${label}${ord.orderCode} ditandai selesai.`, 'success');
-      } catch (err) {
-        showToast(err.message, 'danger');
-      }
-    };
-
-    const buildActions = (ord) => {
-      const actions = [];
-      const sec = getSectionStatuses(ord);
-      if (ord.status === 'ready') {
-        actions.push(
-          el(
-            'button',
-            {
-              type: 'button',
-              className: 'btn btn-sm btn-success',
-              title: 'Tandai pesanan selesai diambil/disajikan',
-              onClick: () => completeSectionOrOrder(ord, 'all'),
-            },
-            [el('i', { className: 'bi bi-check2-all me-1' }), 'Selesai']
-          )
-        );
-      } else {
-        if (sec.foodStatus === 'ready') {
-          actions.push(
-            el(
-              'button',
-              {
-                type: 'button',
-                className: 'btn btn-sm btn-outline-success',
-                title: 'Tandai bagian Makanan selesai diambil',
-                onClick: () => completeSectionOrOrder(ord, 'food'),
-              },
-              [el('i', { className: 'bi bi-check2 me-1' }), 'Mkn Selesai']
-            )
-          );
-        }
-        if (sec.drinkStatus === 'ready') {
-          actions.push(
-            el(
-              'button',
-              {
-                type: 'button',
-                className: 'btn btn-sm btn-outline-success',
-                title: 'Tandai bagian Minuman selesai diambil',
-                onClick: () => completeSectionOrOrder(ord, 'drink'),
-              },
-              [el('i', { className: 'bi bi-check2 me-1' }), 'Mnm Selesai']
-            )
-          );
-        }
-      }
-
-      if (canKasirEdit(ord)) {
-        actions.push(
-          el(
-            'button',
-            {
-              type: 'button',
-              className: 'btn btn-sm btn-outline-primary',
-              onClick: () => loadOrderIntoEditor(ord),
-            },
-            [el('i', { className: 'bi bi-pencil me-1' }), 'Edit']
-          )
-        );
-      }
-
-      if (canKasirCancel(ord)) {
-        actions.push(
-          el(
-            'button',
-            {
-              type: 'button',
-              className: 'btn btn-sm btn-outline-warning',
-              onClick: () => {
-                pendingCancelOrder = ord;
-                document.getElementById('cancel-modal-code').textContent = ord.orderCode;
-                document.getElementById('cancel-reason-input').value = '';
-                cancelModal?.show();
-              },
-            },
-            [el('i', { className: 'bi bi-x-circle me-1' }), 'Batal']
-          )
-        );
-      }
-
-      if (canKasirDelete()) {
-        actions.push(
-          el(
-            'button',
-            {
-              type: 'button',
-              className: 'btn btn-sm btn-outline-danger',
-              onClick: () => {
-                pendingDeleteOrder = ord;
-                document.getElementById('delete-modal-code').textContent = ord.orderCode;
-                deleteModal?.show();
-              },
-            },
-            [el('i', { className: 'bi bi-trash me-1' }), 'Hapus']
-          )
-        );
-      } else {
-        actions.push(
-          el(
-            'span',
-            {
-              className: 'badge text-bg-light text-secondary border align-self-center',
-              title: 'Izin hapus permanen untuk Kasir belum diaktifkan di Pengaturan Admin',
-            },
-            [el('i', { className: 'bi bi-lock-fill me-1' }), 'Hapus (Izin Admin)']
-          )
-        );
-      }
-      return actions;
-    };
-
-    for (const ord of filtered) {
-      const st = statusLabel(ord.status);
-      const sec = getSectionStatuses(ord);
-      const svcText =
-        ord.serviceType === 'dine_in' ? `Makan di Tempat · Meja ${ord.tableNumber || '-'}` : 'Dibungkus (Take Away)';
-      const svcBadgeClass = ord.serviceType === 'dine_in' ? 'text-bg-primary' : 'text-bg-dark';
-
-      const makeSplitBadges = () => {
-        if (!sec.hasFood || !sec.hasDrink || sec.foodStatus === sec.drinkStatus) return null;
-        const fSt = statusLabel(sec.foodStatus);
-        const dSt = statusLabel(sec.drinkStatus);
-        return el('div', { className: 'd-flex flex-wrap gap-1 mt-1' }, [
-          el('span', { className: `badge ${fSt.badge}`, textContent: `Mkn: ${fSt.text}` }),
-          el('span', { className: `badge ${dSt.badge}`, textContent: `Mnm: ${dSt.text}` }),
-        ]);
-      };
-
-      const makeItemLines = () =>
-        (ord.items || []).map((it) =>
-          el('div', { className: 'small text-break' }, [
-            el('span', {
-              className: `badge ${it.category === 'makanan' ? 'text-bg-warning' : 'text-bg-info'} me-1`,
-              textContent: `${it.qty}×`,
-            }),
-            it.name,
-            it.itemStatus === 'ready' && ord.status !== 'ready' && ord.status !== 'completed'
-              ? el('span', { className: 'badge text-bg-success ms-1', textContent: 'Siap' })
-              : null,
-            it.itemStatus === 'completed' && ord.status !== 'completed'
-              ? el('span', { className: 'badge text-bg-secondary ms-1', textContent: 'Diambil' })
-              : null,
-            it.note ? el('span', { className: 'text-secondary fst-italic ms-1', textContent: `(${it.note})` }) : null,
-          ])
-        );
-
-      tbody.appendChild(
-        el('tr', {}, [
-          el('td', {}, [
-            el('div', { className: 'fw-bold' }, [
-              ord.orderCode || ord.id,
-              ord.isEdited ? el('span', { className: 'badge text-bg-info ms-1', textContent: 'DIEDIT' }) : null,
-            ]),
-            el('div', { className: 'text-secondary small', textContent: formatTimeShort(ord.createdAt) }),
-          ]),
-          el('td', {}, [
-            el('div', { className: 'fw-semibold', textContent: ord.customerName || 'Tamu' }),
-            el('span', { className: `badge ${svcBadgeClass}`, textContent: svcText }),
-            ord.notes ? el('div', { className: 'text-secondary small mt-1', textContent: `Catatan: ${ord.notes}` }) : null,
-          ]),
-          el('td', {}, makeItemLines()),
-          el('td', { className: 'fw-semibold', textContent: formatRupiah(ord.totalAmount) }),
-          el('td', {}, [
-            el('span', { className: `badge ${st.badge}`, textContent: st.text }),
-            makeSplitBadges(),
-            ord.status === 'cancelled' && ord.cancelReason
-              ? el('div', { className: 'text-danger small mt-1', textContent: ord.cancelReason })
-              : null,
-          ]),
-          el('td', { className: 'text-end' }, [
-            el('div', { className: 'd-inline-flex flex-wrap gap-1 justify-content-end' }, buildActions(ord)),
-          ]),
-        ])
-      );
-
-      mobileList.appendChild(
-        el('div', { className: 'card border mb-0' }, [
-          el('div', { className: 'card-body p-2' }, [
-            el('div', { className: 'd-flex flex-wrap justify-content-between align-items-center gap-1 mb-1' }, [
-              el('div', { className: 'fw-bold small' }, [
-                ord.orderCode || ord.id,
-                ord.isEdited ? el('span', { className: 'badge text-bg-info ms-1', textContent: 'DIEDIT' }) : null,
-              ]),
-              el('span', { className: `badge ${st.badge}`, textContent: st.text }),
-            ]),
-            makeSplitBadges(),
-            el('div', { className: 'd-flex flex-wrap justify-content-between align-items-center gap-1 small mb-2' }, [
-              el('span', { className: 'fw-semibold', textContent: `${ord.customerName || 'Tamu'} · ${formatTimeShort(ord.createdAt)}` }),
-              el('span', { className: `badge ${svcBadgeClass}`, textContent: svcText }),
-            ]),
-            el('div', { className: 'mb-2' }, makeItemLines()),
-            ord.notes ? el('div', { className: 'text-secondary small mb-1', textContent: `Catatan: ${ord.notes}` }) : null,
-            ord.status === 'cancelled' && ord.cancelReason
-              ? el('div', { className: 'text-danger small mb-2', textContent: `Alasan batal: ${ord.cancelReason}` })
-              : null,
-            el('div', { className: 'd-flex flex-wrap justify-content-between align-items-center gap-2 pt-2 border-top' }, [
-              el('span', { className: 'fw-bold text-primary', textContent: formatRupiah(ord.totalAmount) }),
-              el('div', { className: 'd-flex flex-wrap gap-1' }, buildActions(ord)),
-            ]),
-          ]),
-        ])
-      );
-    }
   };
 
   for (const btn of document.querySelectorAll('.cat-filter')) {
@@ -969,8 +690,6 @@ export function mount(ctx) {
     },
     { signal }
   );
-  document.getElementById('orders-status-filter')?.addEventListener('change', renderOrdersTable, { signal });
-  document.getElementById('orders-search')?.addEventListener('input', renderOrdersTable, { signal });
   document.getElementById('btn-clear-cart')?.addEventListener(
     'click',
     () => {
@@ -1021,22 +740,31 @@ export function mount(ctx) {
       };
 
       submitBtn.disabled = true;
+      const origSubmitHtml = submitBtn.innerHTML;
+      submitBtn.textContent = editingOrderId ? 'Menyimpan...' : 'Mengirim...';
       try {
+        const wasEditing = Boolean(editingOrderId);
         if (editingOrderId) {
           const res = await apiFetch(`/api/orders/${editingOrderId}`, {
             method: 'PUT',
             body: JSON.stringify(payload),
           });
+          upsertOrderInStore(res?.order);
           showToast(`Pesanan ${res.order.orderCode} berhasil diperbarui & dikirim ke Chef.`, 'success');
         } else {
           const res = await apiFetch('/api/orders', {
             method: 'POST',
             body: JSON.stringify(payload),
           });
+          upsertOrderInStore(res?.order);
           showToast(`Pesanan ${res.order.orderCode} terkirim ke Layar Chef!`, 'success');
         }
         resetCartMode();
+        if (wasEditing) {
+          navigate('./daftar-pesanan.html', { pushState: true });
+        }
       } catch (err) {
+        submitBtn.innerHTML = origSubmitHtml;
         showToast(err.message, 'danger');
       } finally {
         submitBtn.disabled = false;
@@ -1045,58 +773,67 @@ export function mount(ctx) {
     { signal }
   );
 
-  document.getElementById('confirm-cancel-btn')?.addEventListener(
-    'click',
-    async () => {
-      if (!pendingCancelOrder) return;
-      const reason = document.getElementById('cancel-reason-input').value.trim() || 'Dibatalkan oleh kasir';
-      try {
-        await apiFetch(`/api/orders/${pendingCancelOrder.id}/status`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status: 'cancelled', cancelReason: reason }),
-        });
-        showToast(`Pesanan ${pendingCancelOrder.orderCode} dibatalkan.`, 'warning');
-        if (editingOrderId === pendingCancelOrder.id) resetCartMode();
-        document.activeElement?.blur();
-        cancelModal?.hide();
-      } catch (err) {
-        showToast(err.message, 'danger');
-      }
-    },
-    { signal }
-  );
-
-  document.getElementById('confirm-delete-btn')?.addEventListener(
-    'click',
-    async () => {
-      if (!pendingDeleteOrder) return;
-      try {
-        await apiFetch(`/api/orders/${pendingDeleteOrder.id}`, { method: 'DELETE' });
-        showToast(`Pesanan ${pendingDeleteOrder.orderCode} dihapus permanen.`, 'success');
-        if (editingOrderId === pendingDeleteOrder.id) resetCartMode();
-        document.activeElement?.blur();
-        deleteModal?.hide();
-      } catch (err) {
-        showToast(err.message, 'danger');
-      }
-    },
-    { signal }
-  );
-
   showStep(0);
+
+  let tablesList = [];
+  const renderTableQuickChips = () => {
+    const wrap = document.getElementById('table-quick-chips');
+    const tableInput = document.getElementById('order-table');
+    if (!wrap || !tableInput) return;
+    wrap.replaceChildren();
+    if (tablesList.length === 0) return;
+
+    const currentVal = tableInput.value.trim().toLowerCase();
+    for (const tbl of tablesList) {
+      const isOccupied = ordersList.some(
+        (o) =>
+          o.serviceType === 'dine_in' &&
+          o.status !== 'cancelled' &&
+          String(o.tableNumber || '').trim().toLowerCase() === String(tbl.number || '').trim().toLowerCase() &&
+          (['pending', 'cooking', 'ready'].includes(o.status) || (o.status === 'completed' && o.paymentStatus !== 'paid'))
+      );
+      const isSelected = currentVal === String(tbl.number || '').trim().toLowerCase();
+      wrap.appendChild(
+        el('button', {
+          type: 'button',
+          className: `btn btn-xs ${isSelected ? 'btn-primary' : isOccupied ? 'btn-outline-secondary' : 'btn-outline-primary'}`,
+          title: isOccupied ? `Meja ${tbl.number} sedang terisi` : `Pilih Meja ${tbl.number} (${tbl.area})`,
+          textContent: isOccupied ? `${tbl.number} (Isi)` : tbl.number,
+          onClick: () => {
+            tableInput.value = tbl.number;
+            tableInput.classList.remove('is-invalid');
+            renderTableQuickChips();
+          },
+        })
+      );
+    }
+  };
+  document.getElementById('order-table')?.addEventListener('input', renderTableQuickChips, { signal });
+
+  const initialTableParam = new URLSearchParams(globalThis.location.search).get('table');
+  if (initialTableParam) {
+    serviceType = 'dine_in';
+    syncServiceButtons();
+    const tableInput = document.getElementById('order-table');
+    if (tableInput) tableInput.value = initialTableParam;
+  }
 
   subscribeStore((snap) => {
     menuList = snap.menu || [];
     menuReady = Boolean(snap.menuReady);
     ordersList = snap.orders || [];
-    ordersReady = Boolean(snap.ordersReady);
-    if (snap.settings) settings = snap.settings;
+    tablesList = snap.tables || [];
     renderMenu();
-    renderOrdersTable();
+    renderTableQuickChips();
+    if (!handledEditParam) {
+      const editId = new URLSearchParams(globalThis.location.search).get('edit');
+      if (editId && ordersList.length > 0) {
+        const target = ordersList.find((o) => o.id === editId);
+        if (target) {
+          handledEditParam = true;
+          loadOrderIntoEditor(target);
+        }
+      }
+    }
   });
-
-  return () => {
-    cancelModal?.dispose();
-    deleteModal?.dispose();
-  };
 }

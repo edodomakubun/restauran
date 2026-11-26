@@ -166,6 +166,21 @@ export class FirebaseAdminRest {
     return data.documents.map(docToObject);
   }
 
+  async listRecentOrders(limit = 40) {
+    const rows = await this.request(`${this.baseUrl}:runQuery`, {
+      method: 'POST',
+      body: JSON.stringify({
+        structuredQuery: {
+          from: [{ collectionId: 'orders' }],
+          orderBy: [{ field: { fieldPath: 'createdAt' }, direction: 'DESCENDING' }],
+          limit,
+        },
+      }),
+    });
+    if (!Array.isArray(rows)) return [];
+    return rows.filter((r) => r.document).map((r) => docToObject(r.document));
+  }
+
   async setDocument(collection, docId, payload) {
     const fields = {};
     for (const [k, v] of Object.entries(payload)) {
@@ -195,6 +210,23 @@ export class FirebaseAdminRest {
     await this.request(`${this.baseUrl}/${collection}/${encodeURIComponent(docId)}`, {
       method: 'DELETE',
     });
+  }
+
+  async deleteDocumentsBatch(collection, docIds) {
+    if (!Array.isArray(docIds) || docIds.length === 0) return 0;
+    let deleted = 0;
+    for (let i = 0; i < docIds.length; i += 400) {
+      const chunk = docIds.slice(i, i + 400);
+      const writes = chunk.map((id) => ({
+        delete: `projects/${this.projectId}/databases/(default)/documents/${collection}/${id}`,
+      }));
+      await this.request(`${this.baseUrl}:commit`, {
+        method: 'POST',
+        body: JSON.stringify({ writes }),
+      });
+      deleted += chunk.length;
+    }
+    return deleted;
   }
 
   async createAuthUser({ email, password, displayName }) {

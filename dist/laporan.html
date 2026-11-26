@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>RestoOrder | Laporan Penjualan</title>
+    <script>
+      (() => {
+        'use strict';
+        const root = document.documentElement;
+        const stored = (() => {
+          try { return localStorage.getItem('lte-theme'); } catch { return null; }
+        })();
+        const resolved = stored === 'dark' || stored === 'light'
+          ? stored
+          : (globalThis.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        root.setAttribute('data-bs-theme', resolved);
+        root.style.colorScheme = resolved;
+        try {
+          const u = JSON.parse(localStorage.getItem('restoran_auth_user') || 'null');
+          if (!u || !u.role) {
+            root.classList.add('auth-pending');
+            globalThis.location.replace('./login.html');
+          } else if (u.role !== 'admin' && u.role !== 'kasir') {
+            root.classList.add('auth-pending');
+            globalThis.location.replace('./chef.html');
+          }
+        } catch {
+          root.classList.add('auth-pending');
+          globalThis.location.replace('./login.html');
+        }
+      })();
+    </script>
+    <style>html.auth-pending body{visibility:hidden}</style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+    <meta name="theme-color" content="#0d6efd" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./assets/img/app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./assets/img/app-icon-192.png" />
+    <link rel="preload" href="./css/adminlte.css" as="style" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@fontsource/source-sans-3@5.3.1/index.css"
+      crossorigin="anonymous"
+      media="print"
+      onload="this.media = 'all'"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.17.0/styles/overlayscrollbars.min.css"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.2/font/bootstrap-icons.min.css"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="./css/adminlte.css" />
+    <link rel="stylesheet" href="./css/restaurant.css" />
+  </head>
+  <body class="layout-fixed fixed-header sidebar-expand-lg bg-body-tertiary">
+    <div class="app-wrapper">
+      <nav class="app-header navbar navbar-expand bg-body">
+        <div class="container-fluid">
+          <ul class="navbar-nav">
+            <li class="nav-item">
+              <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button" aria-label="Alihkan bilah sisi">
+                <i class="bi bi-list"></i>
+              </a>
+            </li>
+            <li class="nav-item d-none d-md-block">
+              <a href="./pesanan.html" class="nav-link"><i class="bi bi-plus-circle me-1"></i>Buat Pesanan</a>
+            </li>
+            <li class="nav-item d-none d-md-block">
+              <a href="./daftar-pesanan.html" class="nav-link"><i class="bi bi-list-check me-1"></i>Daftar Pesanan</a>
+            </li>
+          </ul>
+          <ul class="navbar-nav ms-auto align-items-center gap-1 gap-sm-2">
+            <li class="nav-item form-check form-switch mb-0 me-1 d-flex align-items-center gap-1">
+              <input class="form-check-input mt-0" type="checkbox" id="sound-toggle" checked aria-label="Suara notifikasi" />
+              <label class="form-check-label small" for="sound-toggle">
+                <i class="bi bi-volume-up"></i><span class="d-none d-sm-inline"> Suara</span>
+              </label>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" data-lte-toggle="fullscreen" aria-label="Layar penuh" title="Layar penuh">
+                <i data-lte-icon="maximize" class="bi bi-arrows-fullscreen"></i>
+                <i data-lte-icon="minimize" class="bi bi-fullscreen-exit d-none"></i>
+              </a>
+            </li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-label="Ubah tema">
+                <i class="bi bi-circle-half"></i>
+              </a>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><button class="dropdown-item" type="button" data-bs-theme-value="light"><i class="bi bi-sun-fill me-2"></i>Terang</button></li>
+                <li><button class="dropdown-item" type="button" data-bs-theme-value="dark"><i class="bi bi-moon-stars-fill me-2"></i>Gelap</button></li>
+                <li><button class="dropdown-item" type="button" data-bs-theme-value="auto"><i class="bi bi-circle-half me-2"></i>Otomatis</button></li>
+              </ul>
+            </li>
+            <li class="nav-item d-flex align-items-center gap-1 gap-sm-2 ps-2 border-start">
+              <span id="nav-user-role" class="badge text-bg-secondary">-</span>
+              <span id="nav-user-name" class="fw-semibold small d-none d-md-inline">-</span>
+              <button id="btn-logout" type="button" class="btn btn-sm btn-outline-danger" aria-label="Keluar">
+                <i class="bi bi-box-arrow-right"></i> <span class="d-none d-sm-inline">Keluar</span>
+              </button>
+            </li>
+          </ul>
+        </div>
+      </nav>
+
+      <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
+        <div class="sidebar-brand">
+          <a href="./index.html" class="brand-link">
+            <img src="./assets/img/app-icon.svg" alt="Logo RestoOrder" class="brand-image opacity-90 shadow rounded" />
+            <span class="brand-text fw-light"><b>Resto</b>Order</span>
+          </a>
+        </div>
+        <div class="sidebar-wrapper">
+          <nav class="mt-2" aria-label="Navigasi restoran">
+            <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" data-accordion="false" id="navigation"></ul>
+          </nav>
+        </div>
+      </aside>
+
+      <main class="app-main">
+        <div class="app-content-header">
+          <div class="container-fluid">
+            <div class="row align-items-center g-2">
+              <div class="col-sm-7">
+                <h1 class="mb-0 fs-3"><i class="bi bi-bar-chart-line text-primary me-2"></i>Laporan Penjualan</h1>
+              </div>
+              <div class="col-sm-5 text-sm-end">
+                <button id="btn-export-xlsx" type="button" class="btn btn-success btn-sm fw-semibold">
+                  <i class="bi bi-file-earmark-excel me-1"></i> Ekspor Excel (.xlsx)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="app-content">
+          <div class="container-fluid">
+            <!-- Panel Filter Periode -->
+            <div class="card card-outline card-primary mb-3">
+              <div class="card-body p-2 p-md-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pb-2 mb-2 border-bottom">
+                  <div id="report-mode-tabs" class="d-flex flex-wrap gap-1" role="group" aria-label="Mode periode laporan">
+                    <button type="button" class="btn btn-sm btn-primary report-mode-btn" data-mode="daily">Harian</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary report-mode-btn" data-mode="weekly">Mingguan</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary report-mode-btn" data-mode="monthly">Bulanan</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary report-mode-btn" data-mode="yearly">Tahunan</button>
+                    <button type="button" class="btn btn-sm btn-outline-primary report-mode-btn" data-mode="range">Rentang Hari</button>
+                  </div>
+                  <div class="d-flex flex-wrap align-items-center gap-2">
+                    <select id="report-status-scope" class="form-select form-select-sm w-auto" aria-label="Cakupan status pesanan">
+                      <option value="non_cancelled">Semua Pesanan Non-Batal</option>
+                      <option value="completed_only">Hanya Pesanan Selesai</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Kontrol input per mode -->
+                <div class="d-flex flex-wrap align-items-end gap-2">
+                  <div id="ctrl-daily" class="report-ctrl d-flex flex-wrap align-items-end gap-2">
+                    <div>
+                      <label for="rep-date" class="form-label small fw-semibold mb-1">Pilih Tanggal</label>
+                      <input id="rep-date" type="date" class="form-control form-control-sm" />
+                    </div>
+                    <button type="button" id="btn-today" class="btn btn-sm btn-outline-secondary">Hari Ini</button>
+                  </div>
+
+                  <div id="ctrl-weekly" class="report-ctrl d-none d-flex flex-wrap align-items-end gap-2">
+                    <div>
+                      <label for="rep-week-date" class="form-label small fw-semibold mb-1">Pilih Tanggal dalam Minggu</label>
+                      <input id="rep-week-date" type="date" class="form-control form-control-sm" />
+                    </div>
+                    <button type="button" id="btn-this-week" class="btn btn-sm btn-outline-secondary">Minggu Ini</button>
+                    <button type="button" id="btn-last-week" class="btn btn-sm btn-outline-secondary">Minggu Lalu</button>
+                  </div>
+
+                  <div id="ctrl-monthly" class="report-ctrl d-none d-flex flex-wrap align-items-end gap-2">
+                    <div>
+                      <label for="rep-month" class="form-label small fw-semibold mb-1">Dari Bulan</label>
+                      <select id="rep-month" class="form-select form-select-sm">
+                        <option value="1">Januari</option>
+                        <option value="2">Februari</option>
+                        <option value="3">Maret</option>
+                        <option value="4">April</option>
+                        <option value="5">Mei</option>
+                        <option value="6">Juni</option>
+                        <option value="7">Juli</option>
+                        <option value="8">Agustus</option>
+                        <option value="9">September</option>
+                        <option value="10">Oktober</option>
+                        <option value="11">November</option>
+                        <option value="12">Desember</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label for="rep-month-end" class="form-label small fw-semibold mb-1">Sampai Bulan</label>
+                      <select id="rep-month-end" class="form-select form-select-sm">
+                        <option value="1">Januari</option>
+                        <option value="2">Februari</option>
+                        <option value="3">Maret</option>
+                        <option value="4">April</option>
+                        <option value="5">Mei</option>
+                        <option value="6">Juni</option>
+                        <option value="7">Juli</option>
+                        <option value="8">Agustus</option>
+                        <option value="9">September</option>
+                        <option value="10">Oktober</option>
+                        <option value="11">November</option>
+                        <option value="12">Desember</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label for="rep-month-year" class="form-label small fw-semibold mb-1">Tahun</label>
+                      <input id="rep-month-year" type="number" min="2020" max="2100" class="form-control form-control-sm" style="width: 96px;" />
+                    </div>
+                  </div>
+
+                  <div id="ctrl-yearly" class="report-ctrl d-none d-flex flex-wrap align-items-end gap-2">
+                    <div>
+                      <label for="rep-year" class="form-label small fw-semibold mb-1">Tahun</label>
+                      <input id="rep-year" type="number" min="2020" max="2100" class="form-control form-control-sm" style="width: 110px;" />
+                    </div>
+                  </div>
+
+                  <div id="ctrl-range" class="report-ctrl d-none d-flex flex-wrap align-items-end gap-2">
+                    <div>
+                      <label for="rep-start" class="form-label small fw-semibold mb-1">Dari Tanggal</label>
+                      <input id="rep-start" type="date" class="form-control form-control-sm" />
+                    </div>
+                    <div>
+                      <label for="rep-end" class="form-label small fw-semibold mb-1">Sampai Tanggal</label>
+                      <input id="rep-end" type="date" class="form-control form-control-sm" />
+                    </div>
+                    <button type="button" id="btn-last-7" class="btn btn-sm btn-outline-secondary">7 Hari Terakhir</button>
+                    <button type="button" id="btn-last-30" class="btn btn-sm btn-outline-secondary">30 Hari Terakhir</button>
+                  </div>
+
+                  <div class="ms-auto text-secondary small">
+                    <i class="bi bi-calendar-range me-1"></i>Periode: <strong id="rep-period-label">-</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4 KPI Cards -->
+            <div class="row g-2 mb-3">
+              <div class="col-6 col-lg-3">
+                <div class="small-box text-bg-primary mb-0">
+                  <div class="inner">
+                    <h3 id="kpi-revenue">Rp 0</h3>
+                    <p>Total Omzet</p>
+                  </div>
+                  <i class="small-box-icon bi bi-cash-stack"></i>
+                </div>
+              </div>
+              <div class="col-6 col-lg-3">
+                <div class="small-box text-bg-success mb-0">
+                  <div class="inner">
+                    <h3 id="kpi-orders">0</h3>
+                    <p>Transaksi Valid <span id="kpi-cancelled" class="small opacity-75"></span></p>
+                  </div>
+                  <i class="small-box-icon bi bi-receipt"></i>
+                </div>
+              </div>
+              <div class="col-6 col-lg-3">
+                <div class="small-box text-bg-info mb-0">
+                  <div class="inner">
+                    <h3 id="kpi-items">0</h3>
+                    <p>Porsi Terjual</p>
+                  </div>
+                  <i class="small-box-icon bi bi-bag-check"></i>
+                </div>
+              </div>
+              <div class="col-6 col-lg-3">
+                <div class="small-box text-bg-warning mb-0">
+                  <div class="inner">
+                    <h3 id="kpi-avg">Rp 0</h3>
+                    <p id="kpi-service">Rata-rata Order</p>
+                  </div>
+                  <i class="small-box-icon bi bi-graph-up-arrow"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- Grafik & 3 Tab Rekap -->
+            <div class="card">
+              <div class="card-header p-2">
+                <ul class="nav nav-pills card-header-pills" id="report-tabs" role="tablist">
+                  <li class="nav-item">
+                    <button class="nav-link active btn-sm py-1 px-3" data-bs-toggle="tab" data-bs-target="#tab-periode" type="button" role="tab">
+                      <i class="bi bi-calendar3 me-1"></i>Rekap Periode
+                    </button>
+                  </li>
+                  <li class="nav-item">
+                    <button class="nav-link btn-sm py-1 px-3" data-bs-toggle="tab" data-bs-target="#tab-menu" type="button" role="tab">
+                      <i class="bi bi-trophy me-1"></i>Menu Terlaris <span id="tab-menu-cnt" class="badge text-bg-secondary ms-1">0</span>
+                    </button>
+                  </li>
+                  <li class="nav-item">
+                    <button class="nav-link btn-sm py-1 px-3" data-bs-toggle="tab" data-bs-target="#tab-orders" type="button" role="tab">
+                      <i class="bi bi-list-ul me-1"></i>Detail Transaksi <span id="tab-orders-cnt" class="badge text-bg-secondary ms-1">0</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+              <div class="card-body p-2 p-md-3">
+                <div class="tab-content">
+                  <!-- Tab 1: Rekap Periode -->
+                  <div class="tab-pane fade show active" id="tab-periode" role="tabpanel">
+                    <div id="period-bars" class="mb-3 d-flex flex-column gap-1"></div>
+                    <div class="table-responsive">
+                      <table class="table table-sm table-hover align-middle mb-0">
+                        <thead>
+                          <tr>
+                            <th>Periode</th>
+                            <th class="text-end">Jumlah Order</th>
+                            <th class="text-end">Porsi Terjual</th>
+                            <th class="text-end">Total Omzet</th>
+                          </tr>
+                        </thead>
+                        <tbody id="period-table-body"></tbody>
+                        <tfoot id="period-table-foot" class="table-light fw-bold"></tfoot>
+                      </table>
+                    </div>
+                  </div>
+
+                  <!-- Tab 2: Menu Terlaris -->
+                  <div class="tab-pane fade" id="tab-menu" role="tabpanel">
+                    <div class="table-responsive">
+                      <table class="table table-sm table-hover align-middle mb-0">
+                        <thead>
+                          <tr>
+                            <th>#</th>
+                            <th>Nama Menu</th>
+                            <th>Kategori</th>
+                            <th class="text-end">Harga Satuan</th>
+                            <th class="text-end">Qty</th>
+                            <th class="text-end">Omzet</th>
+                            <th class="text-end">Kontribusi</th>
+                          </tr>
+                        </thead>
+                        <tbody id="menu-report-body"></tbody>
+                      </table>
+                    </div>
+                    <div id="menu-report-pg-footer" class="border-top pt-2 mt-2 d-none d-flex flex-wrap justify-content-between align-items-center gap-2">
+                      <span id="menu-report-pg-info" class="small text-secondary"></span>
+                      <ul id="menu-report-pg" class="pagination pagination-sm m-0"></ul>
+                    </div>
+                  </div>
+
+                  <!-- Tab 3: Detail Transaksi -->
+                  <div class="tab-pane fade" id="tab-orders" role="tabpanel">
+                    <div class="table-responsive">
+                      <table class="table table-sm table-hover align-middle mb-0">
+                        <thead>
+                          <tr>
+                            <th>Kode &amp; Waktu</th>
+                            <th>Pelanggan</th>
+                            <th>Layanan</th>
+                            <th>Rincian Menu</th>
+                            <th>Status</th>
+                            <th class="text-end">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody id="orders-report-body"></tbody>
+                      </table>
+                    </div>
+                    <div id="orders-report-pg-footer" class="border-top pt-2 mt-2 d-none d-flex flex-wrap justify-content-between align-items-center gap-2">
+                      <span id="orders-report-pg-info" class="small text-secondary"></span>
+                      <ul id="orders-report-pg" class="pagination pagination-sm m-0"></ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <footer class="app-footer">
+        <div class="float-end d-none d-sm-inline">Laporan Penjualan &amp; Ekspor Excel</div>
+        <strong>RestoOrder</strong> — Data Real-Time dari Database.
+      </footer>
+    </div>
+
+    <div id="app-page-modals">
+      <div class="modal fade" id="exportExcelModal" tabindex="-1" aria-labelledby="exportExcelLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header py-2 bg-success text-white">
+              <h5 class="modal-title fs-6 fw-bold" id="exportExcelLabel">
+                <i class="bi bi-file-earmark-excel me-1"></i> Opsi Ekspor Excel (.xlsx)
+              </h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body">
+              <div class="small text-secondary mb-2">
+                Periode aktif: <strong id="exp-period-info" class="text-body">-</strong>
+              </div>
+              <div class="d-flex flex-wrap justify-content-between align-items-center gap-1 mb-2">
+                <span class="small fw-semibold">Sertakan Sheet Khusus Per Bulan (Tahun <span id="exp-year-label">-</span>):</span>
+                <div class="btn-group btn-group-sm">
+                  <button type="button" id="exp-sel-all" class="btn btn-outline-primary py-0 px-2">Semua</button>
+                  <button type="button" id="exp-sel-active" class="btn btn-outline-success py-0 px-2">Ada Data</button>
+                  <button type="button" id="exp-sel-none" class="btn btn-outline-secondary py-0 px-2">Kosongkan</button>
+                </div>
+              </div>
+              <div id="exp-months-grid" class="row g-1"></div>
+              <div class="small text-secondary mt-2">
+                Setiap bulan yang dicentang akan dibuatkan <strong>1 sheet tersendiri</strong> di dalam file Excel (berisi Rekap Menu &amp; Detail Transaksi bulan tersebut).
+              </div>
+            </div>
+            <div class="modal-footer py-2">
+              <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+              <button type="button" id="confirm-export-xlsx" class="btn btn-sm btn-success fw-semibold">
+                <i class="bi bi-download me-1"></i> Unduh Excel (.xlsx)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <nav id="mobile-bottom-nav" class="mobile-bottom-nav d-lg-none" aria-label="Navigasi cepat aplikasi"></nav>
+
+    <script src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.17.0/browser/overlayscrollbars.browser.es6.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.9/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
+    <script src="./js/adminlte.js"></script>
+    <script type="module">
+      import { initAppShell } from './js/app-router.js';
+      void initAppShell({
+        pageId: 'laporan',
+        allowedRoles: ['admin', 'kasir'],
+        requiredKasirSetting: 'kasirCanViewReport',
+      });
+    </script>
+  </body>
+</html>

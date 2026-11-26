@@ -31,6 +31,7 @@ rules_version = '2';
 //     - kasirCanDeleteOrder: bool (required)
 //     - kasirCanEditWhileCooking: bool (required)
 //     - kasirCanCancelWhileCooking: bool (required)
+//     - kasirCanViewReport: bool (optional)
 //     - updatedAt: string (optional ISO date, <= 64 chars)
 //
 // Collection: menu_items/{itemId}
@@ -56,12 +57,30 @@ rules_version = '2';
 //     - cancelReason: string (optional, <= 300 chars)
 //     - isEdited: bool (optional)
 //     - totalAmount: number (required, 0..1000000000)
+//     - paymentStatus: string (optional, 'unpaid' | 'paid', <= 20 chars)
+//     - paymentMethod: string (optional, <= 30 chars)
+//     - discountAmount: number (optional, 0..1000000000)
+//     - paidAmount: number (optional, 0..1000000000)
+//     - changeAmount: number (optional, 0..1000000000)
+//     - paidAt: string (optional, <= 64 chars)
+//     - paidBy: string (optional, <= 120 chars)
 //     - items: list (required, 1..100 items)
 //     - createdBy: string (optional, <= 120 chars)
 //     - createdByUid: string (required, immutable, 1..128 chars)
 //     - updatedBy: string (optional, <= 120 chars)
 //     - createdAt: string (required, immutable, <= 64 chars)
 //     - updatedAt: string (required, <= 64 chars)
+//
+// Collection: tables/{tableId}
+//   Fields:
+//     - number: string (required, 1..20 chars)
+//     - area: string (required, 1..40 chars)
+//     - capacity: int/number (required, 1..50)
+//     - status: string (required, 'available' | 'reserved' | 'cleaning')
+//     - note: string (optional, <= 200 chars)
+//     - createdAt: string (optional, <= 64 chars)
+//     - updatedAt: string (optional, <= 64 chars)
+//     - updatedBy: string (optional, <= 120 chars)
 //
 // =============================================================================
 
@@ -147,6 +166,11 @@ service cloud.firestore {
         && data[field].size() <= maxLen;
     }
 
+    function isValidOptionalNumber(data, field, minVal, maxVal) {
+      return !(field in data)
+        || (data[field] is number && data[field] >= minVal && data[field] <= maxVal);
+    }
+
     // =========================================================================
     // Domain Validators (Used in BOTH create and update)
     // =========================================================================
@@ -171,6 +195,7 @@ service cloud.firestore {
           'kasirCanDeleteOrder',
           'kasirCanEditWhileCooking',
           'kasirCanCancelWhileCooking',
+          'kasirCanViewReport',
           'updatedAt'
         ])
         && hasRequiredFields([
@@ -181,6 +206,7 @@ service cloud.firestore {
         && data.kasirCanDeleteOrder is bool
         && data.kasirCanEditWhileCooking is bool
         && data.kasirCanCancelWhileCooking is bool
+        && (!('kasirCanViewReport' in data) || data.kasirCanViewReport is bool)
         && isValidOptionalString(data, 'restaurantName', 120)
         && isValidOptionalString(data, 'updatedAt', 64);
     }
@@ -201,6 +227,24 @@ service cloud.firestore {
         && isValidOptionalString(data, 'updatedAt', 64);
     }
 
+    function isValidTable(data) {
+      return hasOnlyAllowedFields([
+          'number', 'area', 'capacity', 'status', 'note', 'createdAt', 'updatedAt', 'updatedBy'
+        ])
+        && hasRequiredFields(['number', 'area', 'capacity', 'status'])
+        && isValidNonEmptyString(data, 'number', 20)
+        && isValidNonEmptyString(data, 'area', 40)
+        && data.capacity is number
+        && data.capacity >= 1
+        && data.capacity <= 50
+        && data.status is string
+        && data.status in ['available', 'reserved', 'cleaning']
+        && isValidOptionalString(data, 'note', 200)
+        && isValidOptionalString(data, 'createdAt', 64)
+        && isValidOptionalString(data, 'updatedAt', 64)
+        && isValidOptionalString(data, 'updatedBy', 120);
+    }
+
     function isValidOrder(data) {
       return hasOnlyAllowedFields([
           'orderCode',
@@ -214,6 +258,13 @@ service cloud.firestore {
           'cancelReason',
           'isEdited',
           'totalAmount',
+          'paymentStatus',
+          'paymentMethod',
+          'discountAmount',
+          'paidAmount',
+          'changeAmount',
+          'paidAt',
+          'paidBy',
           'items',
           'createdBy',
           'createdByUid',
@@ -246,6 +297,14 @@ service cloud.firestore {
         && data.totalAmount is number
         && data.totalAmount >= 0
         && data.totalAmount <= 1000000000
+        && isValidOptionalString(data, 'paymentStatus', 20)
+        && (!('paymentStatus' in data) || data.paymentStatus in ['unpaid', 'paid'])
+        && isValidOptionalString(data, 'paymentMethod', 30)
+        && isValidOptionalNumber(data, 'discountAmount', 0, 1000000000)
+        && isValidOptionalNumber(data, 'paidAmount', 0, 1000000000)
+        && isValidOptionalNumber(data, 'changeAmount', 0, 1000000000)
+        && isValidOptionalString(data, 'paidAt', 64)
+        && isValidOptionalString(data, 'paidBy', 120)
         && data.items is list
         && data.items.size() >= 1
         && data.items.size() <= 100
@@ -347,6 +406,42 @@ service cloud.firestore {
           prev == 'pending' ||
           (prev == 'cooking' && kasirSetting('kasirCanEditWhileCooking', false) == true)
         ))
+        ||
+        // Kasir memproses pembayaran pada pesanan yang tidak dibatalkan (dan opsional menandai ready -> completed)
+        (prev != 'cancelled'
+          && (
+            (next == prev
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'paymentStatus',
+                'paymentMethod',
+                'discountAmount',
+                'paidAmount',
+                'changeAmount',
+                'paidAt',
+                'paidBy',
+                'status',
+                'updatedBy',
+                'updatedAt'
+              ]))
+            || (prev == 'ready'
+              && next == 'completed'
+              && isValidKitchenItemsUpdate()
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'paymentStatus',
+                'paymentMethod',
+                'discountAmount',
+                'paidAmount',
+                'changeAmount',
+                'paidAt',
+                'paidBy',
+                'status',
+                'foodStatus',
+                'drinkStatus',
+                'items',
+                'updatedBy',
+                'updatedAt'
+              ]))
+          ))
       );
     }
 
@@ -397,6 +492,17 @@ service cloud.firestore {
         && isValidMenuItem(request.resource.data)
         && areImmutableFieldsUnchanged(['createdAt']);
       allow delete: if isActiveAdmin();
+    }
+
+    match /tables/{tableId} {
+      allow read: if isActiveStaff();
+      allow create: if isActiveAdmin() && isValidTable(request.resource.data);
+      allow delete: if isActiveAdmin();
+      allow update: if isValidTable(request.resource.data)
+        && (
+          isActiveAdmin() ||
+          (isActiveKasir() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'note', 'updatedBy', 'updatedAt']))
+        );
     }
 
     match /orders/{orderId} {
