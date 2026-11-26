@@ -205,6 +205,7 @@
         submitBtn.textContent = 'Memproses...';
         try {
           const res = await loginWithEmailPassword(emailEl.value.trim(), passEl.value);
+          const targetUrl = homePageForRole(res.user.role);
           try {
             sessionStorage.setItem('restoran_welcome_splash', '1');
           } catch {
@@ -212,9 +213,41 @@
           }
           if (isSoundEnabled()) {
             playChime('welcome_in');
+          }
+
+          const isFsActive = Boolean(
+            document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement
+          );
+          if (isFsActive) {
+            try {
+              const [html, routerMod] = await Promise.all([
+                fetch(targetUrl, { cache: 'default' }).then((r) => r.text()),
+                import('./js/app-router.js'),
+              ]);
+              const doc = new DOMParser().parseFromString(html, 'text/html');
+              for (const s of doc.body.querySelectorAll('script')) s.remove();
+              document.title = doc.title || document.title;
+              document.documentElement.classList.add('welcome-splash-active');
+              document.body.className = doc.body.className;
+              document.body.innerHTML = doc.body.innerHTML;
+              history.replaceState(null, '', targetUrl);
+              const routeCfg =
+                res.user.role === 'chef'
+                  ? { pageId: 'chef', allowedRoles: ['admin', 'kasir', 'chef'] }
+                  : res.user.role === 'kasir'
+                    ? { pageId: 'pesanan', allowedRoles: ['admin', 'kasir'] }
+                    : { pageId: 'dashboard', allowedRoles: ['admin', 'kasir'] };
+              await routerMod.initAppShell(routeCfg);
+              return;
+            } catch {
+              // Fallback ke navigasi biasa jika gagal
+            }
+          }
+
+          if (isSoundEnabled()) {
             await new Promise((r) => setTimeout(r, 450));
           }
-          globalThis.location.href = homePageForRole(res.user.role);
+          globalThis.location.href = targetUrl;
         } catch (err) {
           errEl.textContent = err.message || 'Gagal masuk.';
           errEl.classList.remove('d-none');

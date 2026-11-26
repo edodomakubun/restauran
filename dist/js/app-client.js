@@ -6,6 +6,7 @@ const USER_STORAGE_KEY = 'restoran_auth_user';
 const CONFIG_SESSION_KEY = 'restoran_runtime_config';
 const SNAPSHOT_SESSION_KEY = 'restoran_store_snapshot_v1';
 const SOUND_STORAGE_KEY = 'restoran_sound_enabled';
+const FULLSCREEN_PREF_KEY = 'restoran_fullscreen_pref';
 const FIREBASE_SDK_VERSION = '11.6.1';
 
 const syncChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('restoran_sync') : null;
@@ -282,6 +283,29 @@ export function bindFullscreenEnhancement() {
   const getFsEl = () =>
     document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement || null;
 
+  const requestFs = () => {
+    const root = document.documentElement;
+    if (getFsEl()) return Promise.resolve();
+    try {
+      if (root.requestFullscreen) return root.requestFullscreen();
+      if (root.webkitRequestFullscreen) {
+        root.webkitRequestFullscreen();
+        return Promise.resolve();
+      }
+    } catch {
+      // Abaikan jika browser butuh gesture pengguna
+    }
+    return Promise.reject(new Error('NO_GESTURE'));
+  };
+
+  let isPageUnloading = false;
+  globalThis.addEventListener('beforeunload', () => {
+    isPageUnloading = true;
+  });
+  globalThis.addEventListener('pagehide', () => {
+    isPageUnloading = true;
+  });
+
   const syncIcons = () => {
     const isFs = Boolean(getFsEl());
     for (const btn of document.querySelectorAll('[data-lte-toggle="fullscreen"]')) {
@@ -299,10 +323,16 @@ export function bindFullscreenEnhancement() {
     }
   };
 
-  // Capture phase fallback jika AdminLTE FullScreen belum mendukung webkitFullscreen atau diblokir browser
+  // Capture phase: simpan preferensi layar penuh & fallback jika perlu
   document.addEventListener('click', (e) => {
     const btn = e.target instanceof Element ? e.target.closest('[data-lte-toggle="fullscreen"]') : null;
     if (!btn) return;
+    const willEnter = !getFsEl();
+    try {
+      localStorage.setItem(FULLSCREEN_PREF_KEY, willEnter ? '1' : '0');
+    } catch {
+      // Abaikan
+    }
     const root = document.documentElement;
     const supported = Boolean(
       document.fullscreenEnabled || document.webkitFullscreenEnabled || root.requestFullscreen || root.webkitRequestFullscreen
@@ -324,9 +354,47 @@ export function bindFullscreenEnhancement() {
     }
   }, true);
 
-  document.addEventListener('fullscreenchange', syncIcons);
-  document.addEventListener('webkitfullscreenchange', syncIcons);
+  const onFsChange = () => {
+    syncIcons();
+    if (!getFsEl() && !isPageUnloading) {
+      try {
+        localStorage.setItem(FULLSCREEN_PREF_KEY, '0');
+      } catch {
+        // Abaikan
+      }
+    }
+  };
+
+  document.addEventListener('fullscreenchange', onFsChange);
+  document.addEventListener('webkitfullscreenchange', onFsChange);
   syncIcons();
+
+  // Jika pengguna sebelumnya mengaktifkan layar penuh (mis. di halaman login),
+  // pulihkan otomatis di halaman tujuan (langsung atau pada ketukan/klik pertama)
+  let wantsFs = false;
+  try {
+    wantsFs = localStorage.getItem(FULLSCREEN_PREF_KEY) === '1';
+  } catch {
+    wantsFs = false;
+  }
+  if (wantsFs && !getFsEl()) {
+    Promise.resolve(requestFs()).catch(() => {
+      const restoreOnGesture = (ev) => {
+        if (ev?.target instanceof Element && ev.target.closest('[data-lte-toggle="fullscreen"]')) return;
+        let stillWants = false;
+        try {
+          stillWants = localStorage.getItem(FULLSCREEN_PREF_KEY) === '1';
+        } catch {
+          stillWants = false;
+        }
+        if (stillWants && !getFsEl()) {
+          Promise.resolve(requestFs()).catch(() => {});
+        }
+      };
+      document.addEventListener('pointerdown', restoreOnGesture, { capture: true, once: true });
+      document.addEventListener('keydown', restoreOnGesture, { capture: true, once: true });
+    });
+  }
 }
 
 export async function getRuntimeConfig() {

@@ -30,19 +30,19 @@ const PAGE_LOADERS = {
 };
 
 const ROUTE_META = {
-  'index.html': { id: 'dashboard', roles: ['admin', 'kasir'], href: './index.html' },
+  index: { id: 'dashboard', roles: ['admin', 'kasir'], href: './index.html' },
   '': { id: 'dashboard', roles: ['admin', 'kasir'], href: './index.html' },
-  'pesanan.html': { id: 'pesanan', roles: ['admin', 'kasir'], href: './pesanan.html' },
-  'daftar-pesanan.html': { id: 'daftar-pesanan', roles: ['admin', 'kasir'], href: './daftar-pesanan.html' },
-  'meja.html': { id: 'meja', roles: ['admin', 'kasir'], href: './meja.html' },
-  'pembayaran.html': { id: 'pembayaran', roles: ['admin', 'kasir'], href: './pembayaran.html' },
-  'laporan.html': { id: 'laporan', roles: ['admin', 'kasir'], requiresSetting: 'kasirCanViewReport', href: './laporan.html' },
-  'panduan.html': { id: 'panduan', roles: ['admin', 'kasir', 'chef'], href: './panduan.html' },
-  'developer.html': { id: 'developer', roles: ['admin', 'kasir', 'chef'], href: './developer.html' },
-  'chef.html': { id: 'chef', roles: ['admin', 'kasir', 'chef'], href: './chef.html' },
-  'menu.html': { id: 'menu', roles: ['admin'], href: './menu.html' },
-  'pengguna.html': { id: 'pengguna', roles: ['admin'], href: './pengguna.html' },
-  'pengaturan.html': { id: 'pengaturan', roles: ['admin'], href: './pengaturan.html' },
+  pesanan: { id: 'pesanan', roles: ['admin', 'kasir'], href: './pesanan.html' },
+  'daftar-pesanan': { id: 'daftar-pesanan', roles: ['admin', 'kasir'], href: './daftar-pesanan.html' },
+  meja: { id: 'meja', roles: ['admin', 'kasir'], href: './meja.html' },
+  pembayaran: { id: 'pembayaran', roles: ['admin', 'kasir'], href: './pembayaran.html' },
+  laporan: { id: 'laporan', roles: ['admin', 'kasir'], requiresSetting: 'kasirCanViewReport', href: './laporan.html' },
+  panduan: { id: 'panduan', roles: ['admin', 'kasir', 'chef'], href: './panduan.html' },
+  developer: { id: 'developer', roles: ['admin', 'kasir', 'chef'], href: './developer.html' },
+  chef: { id: 'chef', roles: ['admin', 'kasir', 'chef'], href: './chef.html' },
+  menu: { id: 'menu', roles: ['admin'], href: './menu.html' },
+  pengguna: { id: 'pengguna', roles: ['admin'], href: './pengguna.html' },
+  pengaturan: { id: 'pengaturan', roles: ['admin'], href: './pengaturan.html' },
 };
 
 const fragmentCache = new Map();
@@ -56,21 +56,28 @@ function resolveRoute(hrefOrUrl) {
   try {
     const u = new URL(hrefOrUrl, globalThis.location.href);
     if (u.origin !== globalThis.location.origin) return null;
-    const filename = u.pathname.split('/').pop() || '';
+    const filename = (u.pathname.split('/').pop() || '').replace(/\.html$/i, '');
     const meta = ROUTE_META[filename];
     if (!meta) return null;
-    return { ...meta, url: u.pathname + u.search + u.hash, pathname: u.pathname };
+    return {
+      ...meta,
+      url: u.pathname + u.search + u.hash,
+      pathname: u.pathname,
+      search: u.search,
+    };
   } catch {
     return null;
   }
 }
 
 async function fetchPageFragment(href) {
-  const key = resolveRoute(href)?.pathname || href;
+  const resolved = resolveRoute(href);
+  const key = resolved?.id || resolved?.pathname || href;
   if (fragmentCache.has(key)) {
     return fragmentCache.get(key);
   }
-  const res = await fetch(href, { cache: 'default' });
+  const fetchHref = resolved?.href || href;
+  const res = await fetch(fetchHref, { cache: 'default' });
   if (!res.ok) throw new Error(`Gagal memuat halaman (${res.status}).`);
   const html = await res.text();
   const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -94,7 +101,7 @@ function cacheCurrentDocument(pageId) {
   const modalsEl = document.getElementById('app-page-modals');
   const footerEl = document.querySelector('footer.app-footer');
   if (!mainEl) return;
-  fragmentCache.set(globalThis.location.pathname, {
+  fragmentCache.set(pageId, {
     title: document.title,
     mainHtml: mainEl.innerHTML,
     modalsHtml: modalsEl ? modalsEl.innerHTML : '',
@@ -197,7 +204,8 @@ export async function navigateTo(href, { pushState = true } = {}) {
     return;
   }
 
-  if (target.pathname === globalThis.location.pathname && currentPageId === target.id && pushState) {
+  const currentUrl = globalThis.location.pathname + globalThis.location.search + globalThis.location.hash;
+  if (target.url === currentUrl && currentPageId === target.id && pushState) {
     closeOpenModalsAndMobileSidebar();
     return;
   }
@@ -210,8 +218,8 @@ export async function navigateTo(href, { pushState = true } = {}) {
     closeOpenModalsAndMobileSidebar();
     teardownCurrentPage();
 
-    if (pushState && target.url !== globalThis.location.pathname + globalThis.location.search) {
-      history.pushState({ pageId: target.id }, '', target.href);
+    if (pushState && target.url !== currentUrl) {
+      history.pushState({ pageId: target.id }, '', target.url);
     }
 
     document.title = frag.title;
@@ -241,7 +249,7 @@ export async function navigateTo(href, { pushState = true } = {}) {
     await mountPageModule(target.id);
     globalThis.scrollTo({ top: 0, behavior: 'instant' });
   } catch {
-    globalThis.location.href = target.href;
+    globalThis.location.href = target.url || target.href;
   } finally {
     clearTimeout(progressTimer);
     setTopProgress(false);

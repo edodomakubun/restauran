@@ -1094,30 +1094,43 @@ export function createWorkerHandler(options = {}) {
 
           const prevSections = resolveSectionStatuses(existing);
           const defaultNewItemStatus = existing.status === 'cooking' ? 'cooking' : 'pending';
-          const prevStatusByNoteKey = new Map();
-          const prevStatusByNameKey = new Map();
-          const pushQueue = (map, k, val) => {
-            if (!map.has(k)) map.set(k, []);
-            map.get(k).push(val);
-          };
-          for (const prevIt of prevSections.items) {
+          const prevPool = prevSections.items.map((prevIt) => {
             const baseKey = `${prevIt.category}|${String(prevIt.name || '').toLowerCase()}`;
             const noteKey = `${baseKey}|${String(prevIt.note || '').trim().toLowerCase()}`;
-            pushQueue(prevStatusByNoteKey, noteKey, prevIt.itemStatus);
-            pushQueue(prevStatusByNameKey, baseKey, prevIt.itemStatus);
-          }
-          const shiftQueue = (map, k) => {
-            const q = map.get(k);
-            return q && q.length > 0 ? q.shift() : null;
-          };
-          const nextItems = parsed.items.map((it) => {
+            return { baseKey, noteKey, itemStatus: prevIt.itemStatus, used: false };
+          });
+          const resolvedStatuses = new Array(parsed.items.length).fill(null);
+
+          // Pass 1: cocokkan item identik (kategori + nama + catatan) agar status per-menu tidak tertukar
+          parsed.items.forEach((it, idx) => {
+            if (VALID_STATUSES.has(it.itemStatus)) {
+              resolvedStatuses[idx] = it.itemStatus;
+              return;
+            }
             const baseKey = `${it.category}|${String(it.name || '').toLowerCase()}`;
             const noteKey = `${baseKey}|${String(it.note || '').trim().toLowerCase()}`;
-            const preserved = VALID_STATUSES.has(it.itemStatus)
-              ? it.itemStatus
-              : shiftQueue(prevStatusByNoteKey, noteKey) || shiftQueue(prevStatusByNameKey, baseKey);
-            return { ...it, itemStatus: VALID_STATUSES.has(preserved) ? preserved : defaultNewItemStatus };
+            const match = prevPool.find((p) => !p.used && p.noteKey === noteKey);
+            if (match) {
+              match.used = true;
+              resolvedStatuses[idx] = match.itemStatus;
+            }
           });
+
+          // Pass 2: cocokkan sisa item dengan nama menu sama (mis. kasir mengubah catatan item lama)
+          parsed.items.forEach((it, idx) => {
+            if (resolvedStatuses[idx]) return;
+            const baseKey = `${it.category}|${String(it.name || '').toLowerCase()}`;
+            const match = prevPool.find((p) => !p.used && p.baseKey === baseKey);
+            if (match) {
+              match.used = true;
+              resolvedStatuses[idx] = match.itemStatus;
+            }
+          });
+
+          const nextItems = parsed.items.map((it, idx) => ({
+            ...it,
+            itemStatus: VALID_STATUSES.has(resolvedStatuses[idx]) ? resolvedStatuses[idx] : defaultNewItemStatus,
+          }));
           const derived = resolveSectionStatuses({ ...existing, items: nextItems });
           const nextOverall = computeOverallOrderStatus(derived.foodStatus, derived.drinkStatus, existing.status);
 

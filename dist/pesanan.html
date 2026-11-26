@@ -326,16 +326,18 @@
                     </fieldset>
 
                     <!-- Navigasi Bawah Wizard -->
-                    <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top gap-2">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mt-2 pt-2 border-top gap-2">
                       <button type="button" class="btn btn-sm btn-outline-secondary" id="wz-prev" disabled>
                         <i class="bi bi-arrow-left me-1"></i> Sebelumnya
                       </button>
-                      <button type="button" class="btn btn-sm btn-primary" id="wz-next">
-                        Berikutnya <i class="bi bi-arrow-right ms-1"></i>
-                      </button>
-                      <button id="btn-submit-order" type="button" class="btn btn-sm btn-success d-none">
-                        <i class="bi bi-send-check me-1"></i> Kirim Pesanan ke Dapur
-                      </button>
+                      <div class="d-flex flex-wrap align-items-center gap-2 ms-auto">
+                        <button type="button" class="btn btn-sm btn-primary" id="wz-next">
+                          Berikutnya <i class="bi bi-arrow-right ms-1"></i>
+                        </button>
+                        <button id="btn-submit-order" type="button" class="btn btn-sm btn-success d-none">
+                          <i class="bi bi-send-check me-1"></i> Kirim Pesanan ke Dapur
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

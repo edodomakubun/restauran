@@ -30,7 +30,15 @@ export function mount(ctx) {
   let tablesList = [];
   let tablesReady = false;
   let ordersList = [];
+  let settings = session.settings || {};
   let areaFilter = 'all';
+
+  const canEditOrder = (ord) => {
+    if (isAdmin) return ord.status !== 'cancelled' && ord.status !== 'completed';
+    if (ord.status === 'pending') return true;
+    if (ord.status === 'cooking') return Boolean(settings.kasirCanEditWhileCooking);
+    return false;
+  };
 
   const modalEl = document.getElementById('tableModal');
   const tableModal = modalEl ? new globalThis.bootstrap.Modal(modalEl) : null;
@@ -160,14 +168,14 @@ export function mount(ctx) {
             [el('i', { className: 'bi bi-cash-coin me-1' }), ord.paymentStatus === 'paid' ? 'Struk' : 'Bayar']
           )
         );
-        if (ord.status === 'pending') {
+        if (canEditOrder(ord)) {
           actionBtns.push(
             el(
               'button',
               {
                 type: 'button',
                 className: 'btn btn-xs btn-outline-primary',
-                onClick: () => navigate(`./pesanan.html?edit=${encodeURIComponent(ord.id)}`, { pushState: true }),
+                onClick: () => navigate(`./pesanan.html?edit=${encodeURIComponent(ord.id)}&from=meja`, { pushState: true }),
               },
               [el('i', { className: 'bi bi-pencil me-1' }), 'Edit']
             )
@@ -317,6 +325,7 @@ export function mount(ctx) {
     tablesList = snap.tables || [];
     tablesReady = Boolean(snap.tablesReady);
     ordersList = snap.orders || [];
+    if (snap.settings) settings = snap.settings;
     renderTables();
   });
 

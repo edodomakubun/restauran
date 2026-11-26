@@ -352,6 +352,7 @@ test('Same menu split variants with different notes preserve per-item status acr
       items: [
         { name: 'Nasi Goreng', category: 'makanan', qty: 1, price: 20000, note: 'Tidak Pedas' },
         { name: 'Nasi Goreng', category: 'makanan', qty: 1, price: 20000, note: 'Pedas' },
+        { name: 'Nasi Goreng', category: 'makanan', qty: 1, price: 20000, note: 'Extra Pedas' },
         { name: 'Es Teh Manis', category: 'minuman', qty: 1, price: 5000, note: 'Kurang Gula' },
       ],
     },
@@ -361,6 +362,7 @@ test('Same menu split variants with different notes preserve per-item status acr
   assert.equal(edited.json.order.items[0].itemStatus, 'ready');
   assert.equal(edited.json.order.items[1].itemStatus, 'cooking');
   assert.equal(edited.json.order.items[2].itemStatus, 'cooking');
+  assert.equal(edited.json.order.items[3].itemStatus, 'cooking');
 });
 
 test('DELETE /api/orders deletes all orders only for Admin', async () => {

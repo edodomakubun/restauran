@@ -8,6 +8,7 @@ import {
   initCollapsiblePanel,
   renderPagination,
   showToast,
+  statusLabel,
   upsertOrderInStore,
 } from '../app-client.js';
 
@@ -72,7 +73,10 @@ function toggleQuickNoteTag(currentNote, tag, group) {
 }
 
 export function mount(ctx) {
-  const { signal, navigate, subscribeStore } = ctx;
+  const { session, signal, navigate, subscribeStore } = ctx;
+  const initialQuery = new URLSearchParams(globalThis.location.search);
+  const initialFromParam = initialQuery.get('from');
+  let editReturnHref = initialFromParam === 'meja' ? './meja.html' : './daftar-pesanan.html';
   let menuList = [];
   let menuReady = false;
   let menuPage = 1;
@@ -81,8 +85,11 @@ export function mount(ctx) {
   let serviceType = 'dine_in';
   let editingOrderId = null;
   let handledEditParam = false;
+  let storeEmissions = 0;
+  let missingEditTimer = null;
   let cart = [];
   const expandedNoteItems = new WeakSet();
+  const editingPriceItems = new WeakSet();
   let currentStep = 0;
 
   // Inisialisasi panel collapsible (Wizard pakai CardWidget, Tulis Menu Manual pakai Collapse datar tanpa card)
@@ -162,7 +169,7 @@ export function mount(ctx) {
     if (prevBtn) prevBtn.disabled = currentStep === 0;
     const isLast = currentStep === steps.length - 1;
     if (nextBtn) nextBtn.classList.toggle('d-none', isLast);
-    if (submitBtn) submitBtn.classList.toggle('d-none', !isLast);
+    if (submitBtn) submitBtn.classList.toggle('d-none', !isLast && !editingOrderId);
     if (isLast) renderWizardSummary();
   };
 
@@ -307,6 +314,25 @@ export function mount(ctx) {
               title: `Varian ke-${variantNum} untuk ${item.name}`,
             })
           : null;
+      const kitchenStatusBadge =
+        editingOrderId && item.itemStatus && item.itemStatus !== 'pending' && item.itemStatus !== 'cancelled'
+          ? el('span', {
+              className: `badge ms-1 ${
+                item.itemStatus === 'ready'
+                  ? 'text-bg-success'
+                  : item.itemStatus === 'completed'
+                    ? 'text-bg-secondary'
+                    : 'text-bg-primary'
+              }`,
+              textContent:
+                item.itemStatus === 'ready'
+                  ? 'Siap'
+                  : item.itemStatus === 'completed'
+                    ? 'Diambil'
+                    : 'Dimasak',
+              title: 'Status item saat ini di dapur',
+            })
+          : null;
 
       const isOptsOpen = expandedNoteItems.has(item);
       const groups = getQuickNoteGroups(item);
@@ -438,14 +464,78 @@ export function mount(ctx) {
         ]
       );
 
+      const isEditingPrice = editingPriceItems.has(item);
+      const priceRow = isEditingPrice
+        ? el(
+            'form',
+            {
+              className: 'd-flex flex-wrap align-items-center gap-1 mt-1',
+              onSubmit: (e) => {
+                e.preventDefault();
+                const rawVal = Number.parseInt(e.currentTarget.querySelector('input')?.value || '0', 10);
+                cart[idx].price = Number.isFinite(rawVal) && rawVal >= 0 ? rawVal : 0;
+                editingPriceItems.delete(item);
+                renderCart();
+              },
+            },
+            [
+              el('span', { className: 'small text-secondary', textContent: 'Rp' }),
+              el('input', {
+                type: 'number',
+                min: '0',
+                step: '500',
+                className: 'form-control form-control-sm',
+                style: 'width: 96px; padding: 0.12rem 0.35rem; font-size: 0.78rem;',
+                value: String(Math.max(0, Number(item.price || 0))),
+                ariaLabel: `Harga satuan ${item.name}`,
+                onInput: (e) => {
+                  const val = Number.parseInt(e.target.value || '0', 10);
+                  cart[idx].price = Number.isFinite(val) && val >= 0 ? val : 0;
+                  const sumTotal = cart.reduce((s, it) => s + Number(it.price || 0) * Number(it.qty || 0), 0);
+                  const sumQty = cart.reduce((s, it) => s + Number(it.qty || 0), 0);
+                  totalEl.textContent = formatRupiah(sumTotal);
+                  if (badgeEl) badgeEl.textContent = `${sumQty} item · ${formatRupiah(sumTotal)}`;
+                },
+              }),
+              el('button', { type: 'submit', className: 'btn btn-xs btn-primary', textContent: 'OK' }),
+              el('button', {
+                type: 'button',
+                className: 'btn btn-xs btn-outline-secondary',
+                textContent: 'Batal',
+                onClick: () => {
+                  editingPriceItems.delete(item);
+                  renderCart();
+                },
+              }),
+            ]
+          )
+        : el('div', { className: 'text-secondary small d-flex flex-wrap align-items-center gap-1' }, [
+            el('span', {
+              textContent:
+                Number(item.price) > 0
+                  ? `${formatRupiah(item.price)} × ${item.qty} = ${formatRupiah(item.price * item.qty)}`
+                  : `Harga belum diset × ${item.qty}`,
+            }),
+            el(
+              'button',
+              {
+                type: 'button',
+                className: `btn btn-link btn-xs p-0 text-decoration-none ${Number(item.price) === 0 ? 'text-primary fw-semibold' : 'text-secondary'}`,
+                title: 'Ubah harga satuan menu ini',
+                onClick: () => {
+                  editingPriceItems.add(item);
+                  renderCart();
+                },
+              },
+              Number(item.price) === 0 ? ['Isi Harga'] : [el('i', { className: 'bi bi-pencil' })]
+            ),
+          ]);
+
       const row = el('div', { className: 'list-group-item py-1 px-2' }, [
         el('div', { className: 'd-flex flex-wrap justify-content-between align-items-center gap-1' }, [
           el('div', { className: 'flex-grow-1 min-w-0' }, [
-            el('div', { className: 'fw-semibold small text-break' }, [catPill, item.name, variantBadge]),
-            el('div', {
-              className: 'text-secondary small',
-              textContent: `${formatRupiah(item.price)} × ${item.qty} = ${formatRupiah(item.price * item.qty)}`,
-            }),
+            el('div', { className: 'fw-semibold small text-break' }, [catPill, item.name, variantBadge, kitchenStatusBadge]),
+            priceRow,
           ]),
           el('div', { className: 'd-flex align-items-center gap-1 flex-shrink-0 ms-auto' }, [
             splitOrVariantBtn,
@@ -469,6 +559,20 @@ export function mount(ctx) {
                 className: 'btn btn-outline-secondary',
                 textContent: '+',
                 onClick: () => {
+                  if (editingOrderId && (cart[idx].itemStatus === 'ready' || cart[idx].itemStatus === 'completed')) {
+                    cart.splice(idx + 1, 0, {
+                      menuItemId: item.menuItemId || null,
+                      name: item.name,
+                      category: item.category,
+                      qty: 1,
+                      price: Number(item.price || 0),
+                      note: item.note || '',
+                      itemStatus: 'pending',
+                    });
+                    renderCart();
+                    showToast(`1 porsi baru "${item.name}" ditambahkan ke antrean dapur.`, 'info');
+                    return;
+                  }
                   cart[idx].qty += 1;
                   renderCart();
                 },
@@ -503,7 +607,9 @@ export function mount(ctx) {
         c.name.toLowerCase() === item.name.toLowerCase() &&
         c.category === item.category &&
         (c.note || '') === (item.note || '') &&
-        c.price === item.price
+        Number(c.price || 0) === Number(item.price || 0) &&
+        c.itemStatus !== 'ready' &&
+        c.itemStatus !== 'completed'
     );
     if (idx >= 0) {
       cart[idx].qty += item.qty || 1;
@@ -625,11 +731,13 @@ export function mount(ctx) {
 
   const resetCartMode = () => {
     editingOrderId = null;
+    editReturnHref = './daftar-pesanan.html';
     cart = [];
     serviceType = 'dine_in';
     syncServiceButtons();
     document.getElementById('order-customer').value = '';
     document.getElementById('order-table').value = '';
+    document.getElementById('order-table')?.classList.remove('is-invalid');
     document.getElementById('order-notes').value = '';
     document.getElementById('cart-title').innerHTML = '<i class="bi bi-bag-check me-1"></i> Pesanan Baru';
     document.getElementById('btn-cancel-edit').classList.add('d-none');
@@ -638,6 +746,7 @@ export function mount(ctx) {
       submitBtn.innerHTML = '<i class="bi bi-send-check me-1"></i> Kirim Pesanan ke Dapur';
     }
     renderCart();
+    renderTableQuickChips();
     showStep(0);
     if (globalThis.location.search.includes('edit=')) {
       history.replaceState(null, '', './pesanan.html');
@@ -648,18 +757,44 @@ export function mount(ctx) {
     editingOrderId = ord.id;
     serviceType = ord.serviceType || 'dine_in';
     syncServiceButtons();
-    document.getElementById('order-customer').value = ord.customerName || '';
-    document.getElementById('order-table').value = ord.tableNumber || '';
-    document.getElementById('order-notes').value = ord.notes || '';
+    const custEl = document.getElementById('order-customer');
+    const tableEl = document.getElementById('order-table');
+    const notesEl = document.getElementById('order-notes');
+    if (custEl) custEl.value = ord.customerName || '';
+    if (tableEl) {
+      tableEl.value = ord.tableNumber || '';
+      tableEl.classList.remove('is-invalid');
+    }
+    if (notesEl) notesEl.value = ord.notes || '';
     cart = (ord.items || []).map((it) => ({ ...it }));
     document.getElementById('cart-title').innerHTML = '<i class="bi bi-pencil-square me-1"></i> Edit Pesanan';
-    document.getElementById('edit-order-code').textContent = ord.orderCode || ord.id;
+
+    const bannerEl = document.getElementById('edit-banner');
+    if (bannerEl) {
+      const stMeta = statusLabel(ord.status);
+      const svcMeta = serviceType === 'dine_in' ? `Meja ${ord.tableNumber || '-'}` : 'Dibungkus';
+      bannerEl.replaceChildren(
+        el('i', { className: 'bi bi-pencil-square me-1' }),
+        'Mengedit ',
+        el('strong', { id: 'edit-order-code', textContent: ord.orderCode || ord.id }),
+        ` · ${ord.customerName || 'Tamu'} (${svcMeta}) `,
+        el('span', { className: `badge ${stMeta.badge} ms-1`, textContent: stMeta.text }),
+        ord.paymentStatus === 'paid'
+          ? el('span', {
+              className: 'ms-1 fw-semibold text-warning-emphasis',
+              textContent: '· Sudah Lunas (cek ulang pembayaran bila total berubah)',
+            })
+          : ' · Ubah menu atau detail lalu klik Simpan Perubahan.'
+      );
+      bannerEl.classList.remove('d-none');
+    }
+
     document.getElementById('btn-cancel-edit').classList.remove('d-none');
-    document.getElementById('edit-banner').classList.remove('d-none');
     if (submitBtn) {
       submitBtn.innerHTML = '<i class="bi bi-save me-1"></i> Simpan Perubahan Pesanan';
     }
     renderCart();
+    renderTableQuickChips();
     showStep(0);
     const wizardCard = document.getElementById('order-wizard-card');
     if (wizardCard?.classList.contains('collapsed-card')) {
@@ -744,6 +879,7 @@ export function mount(ctx) {
       submitBtn.textContent = editingOrderId ? 'Menyimpan...' : 'Mengirim...';
       try {
         const wasEditing = Boolean(editingOrderId);
+        const returnHref = editReturnHref;
         if (editingOrderId) {
           const res = await apiFetch(`/api/orders/${editingOrderId}`, {
             method: 'PUT',
@@ -761,7 +897,7 @@ export function mount(ctx) {
         }
         resetCartMode();
         if (wasEditing) {
-          navigate('./daftar-pesanan.html', { pushState: true });
+          navigate(returnHref, { pushState: true });
         }
       } catch (err) {
         submitBtn.innerHTML = origSubmitHtml;
@@ -787,6 +923,7 @@ export function mount(ctx) {
     for (const tbl of tablesList) {
       const isOccupied = ordersList.some(
         (o) =>
+          o.id !== editingOrderId &&
           o.serviceType === 'dine_in' &&
           o.status !== 'cancelled' &&
           String(o.tableNumber || '').trim().toLowerCase() === String(tbl.number || '').trim().toLowerCase() &&
@@ -810,30 +947,80 @@ export function mount(ctx) {
   };
   document.getElementById('order-table')?.addEventListener('input', renderTableQuickChips, { signal });
 
-  const initialTableParam = new URLSearchParams(globalThis.location.search).get('table');
-  if (initialTableParam) {
+  const initialTableParam = initialQuery.get('table');
+  if (initialTableParam && !initialQuery.get('edit')) {
     serviceType = 'dine_in';
     syncServiceButtons();
     const tableInput = document.getElementById('order-table');
     if (tableInput) tableInput.value = initialTableParam;
   }
 
+  signal?.addEventListener('abort', () => clearTimeout(missingEditTimer), { once: true });
+
+  const tryHandleEditTarget = (snap) => {
+    if (handledEditParam) return;
+    const editId = new URLSearchParams(globalThis.location.search).get('edit');
+    if (!editId) return;
+
+    const target = ordersList.find((o) => o.id === editId);
+    if (target) {
+      clearTimeout(missingEditTimer);
+      const role = session?.user?.role;
+      const settings = snap.settings || session?.settings || {};
+      const neverEditable =
+        target.status === 'cancelled' ||
+        target.status === 'completed' ||
+        (role !== 'admin' && target.status === 'ready');
+      if (neverEditable) {
+        handledEditParam = true;
+        showToast(
+          `Pesanan ${target.orderCode || ''} berstatus "${statusLabel(target.status).text}" sehingga tidak dapat diedit.`,
+          'warning'
+        );
+        resetCartMode();
+        return;
+      }
+      if (role !== 'admin' && target.status === 'cooking') {
+        if (!snap.settingsReady && storeEmissions < 2) return;
+        if (!settings.kasirCanEditWhileCooking) {
+          handledEditParam = true;
+          showToast('Admin belum mengizinkan Kasir mengedit pesanan yang sedang dimasak.', 'warning');
+          resetCartMode();
+          return;
+        }
+      }
+      handledEditParam = true;
+      loadOrderIntoEditor(target);
+      return;
+    }
+
+    if (snap.ordersReady && storeEmissions >= 2) {
+      clearTimeout(missingEditTimer);
+      handledEditParam = true;
+      showToast('Pesanan yang akan diedit tidak ditemukan atau sudah dihapus.', 'warning');
+      resetCartMode();
+    } else if (!missingEditTimer) {
+      missingEditTimer = setTimeout(() => {
+        if (!handledEditParam && !signal?.aborted) {
+          const stillMissing = !ordersList.some((o) => o.id === editId);
+          if (stillMissing) {
+            handledEditParam = true;
+            showToast('Pesanan yang akan diedit tidak ditemukan atau sudah dihapus.', 'warning');
+            resetCartMode();
+          }
+        }
+      }, 2200);
+    }
+  };
+
   subscribeStore((snap) => {
+    storeEmissions += 1;
     menuList = snap.menu || [];
     menuReady = Boolean(snap.menuReady);
     ordersList = snap.orders || [];
     tablesList = snap.tables || [];
     renderMenu();
     renderTableQuickChips();
-    if (!handledEditParam) {
-      const editId = new URLSearchParams(globalThis.location.search).get('edit');
-      if (editId && ordersList.length > 0) {
-        const target = ordersList.find((o) => o.id === editId);
-        if (target) {
-          handledEditParam = true;
-          loadOrderIntoEditor(target);
-        }
-      }
-    }
+    tryHandleEditTarget(snap);
   });
 }
