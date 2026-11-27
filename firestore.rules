@@ -83,6 +83,7 @@ service cloud.firestore {
       return data.keys().hasOnly(['uid', 'email', 'displayName', 'name', 'role', 'isActive', 'createdAt', 'updatedAt'])
         && data.keys().hasAll(['email', 'role', 'isActive'])
         && data.email is string && data.email.size() >= 3 && data.email.size() <= 160
+        && data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")
         && data.role in ['admin', 'kasir', 'chef']
         && data.isActive is bool
         && (isNonEmptyStr(data, 'displayName', 120) || isNonEmptyStr(data, 'name', 120))
@@ -169,12 +170,16 @@ service cloud.firestore {
         && ('updatedAt' in data) && isValidDate(data.updatedAt);
     }
 
-    function isValidSectionStep(prevVal, nextVal) {
+    function isValidKitchenItemsUpdate() {
+      return !('items' in request.resource.data.diff(resource.data).affectedKeys())
+        || (request.resource.data.items is list && request.resource.data.items.size() == resource.data.items.size());
+    }
+
+    function isValidSectionStep(field, prevVal, nextVal) {
       return nextVal == prevVal
-        || nextVal == 'none'
-        || (prevVal == 'none' && nextVal in ['pending', 'cooking', 'ready', 'completed'])
-        || (prevVal == 'pending' && nextVal in ['cooking', 'ready', 'completed'])
-        || (prevVal == 'cooking' && nextVal in ['ready', 'completed'])
+        || (!(field in resource.data) && nextVal in ['none', 'pending', 'cooking', 'ready', 'completed'])
+        || (prevVal == 'pending' && nextVal == 'cooking')
+        || (prevVal == 'cooking' && nextVal == 'ready')
         || (prevVal == 'ready' && nextVal == 'completed');
     }
 
@@ -183,16 +188,15 @@ service cloud.firestore {
       let nextFood = request.resource.data.get('foodStatus', prevFood);
       let prevDrink = resource.data.get('drinkStatus', 'none');
       let nextDrink = request.resource.data.get('drinkStatus', prevDrink);
-      return (!('items' in request.resource.data.diff(resource.data).affectedKeys())
-          || (request.resource.data.items is list && request.resource.data.items.size() == resource.data.items.size()))
-        && isValidSectionStep(resource.data.status, request.resource.data.status)
-        && isValidSectionStep(prevFood, nextFood)
-        && isValidSectionStep(prevDrink, nextDrink);
+      return isValidKitchenItemsUpdate()
+        && isValidSectionStep('status', resource.data.status, request.resource.data.status)
+        && isValidSectionStep('foodStatus', prevFood, nextFood)
+        && isValidSectionStep('drinkStatus', prevDrink, nextDrink);
     }
 
     function isValidChefOrderUpdate() {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'items', 'status', 'foodStatus', 'drinkStatus', 'cancelReason', 'updatedBy', 'updatedAt'
+          'items', 'status', 'foodStatus', 'drinkStatus', 'updatedBy', 'updatedAt'
         ])
         && resource.data.status in ['pending', 'cooking', 'ready']
         && request.resource.data.status in ['pending', 'cooking', 'ready', 'completed']
@@ -202,32 +206,65 @@ service cloud.firestore {
     function isValidKasirOrderUpdate() {
       let prev = resource.data.status;
       let next = request.resource.data.status;
+      let prevFood = resource.data.get('foodStatus', 'none');
+      let nextFood = request.resource.data.get('foodStatus', prevFood);
+      let prevDrink = resource.data.get('drinkStatus', 'none');
+      let nextDrink = request.resource.data.get('drinkStatus', prevDrink);
       return (
-        // Update status dapur / selesai
+        // Update status selesai oleh kasir (hanya ready -> completed)
         (request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'items', 'status', 'foodStatus', 'drinkStatus', 'cancelReason', 'updatedBy', 'updatedAt'
+            'items', 'status', 'foodStatus', 'drinkStatus', 'updatedBy', 'updatedAt'
           ])
-          && next in ['cooking', 'ready', 'completed']
-          && isValidKitchenFields())
+          && (
+            (prev == 'ready' && next == 'completed')
+            || (prev in ['cooking', 'ready'] && next == prev)
+          )
+          && (nextFood == prevFood || (prevFood == 'ready' && nextFood == 'completed'))
+          && (nextDrink == prevDrink || (prevDrink == 'ready' && nextDrink == 'completed'))
+          && isValidKitchenItemsUpdate())
         ||
         // Pembatalan pesanan oleh kasir
         (next == 'cancelled'
           && (prev == 'pending' || (prev == 'cooking' && kasirSetting('kasirCanCancelWhileCooking', false) == true))
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'items', 'status', 'foodStatus', 'drinkStatus', 'cancelReason', 'updatedBy', 'updatedAt'
-          ]))
+          ])
+          && (nextFood == prevFood || (prevFood != 'none' && nextFood == 'cancelled'))
+          && (nextDrink == prevDrink || (prevDrink != 'none' && nextDrink == 'cancelled'))
+          && isValidKitchenItemsUpdate())
         ||
         // Edit pesanan oleh kasir
-        (next == prev
-          && (prev == 'pending' || (prev == 'cooking' && kasirSetting('kasirCanEditWhileCooking', false) == true)))
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'customerName', 'serviceType', 'tableNumber', 'notes', 'items',
+            'totalAmount', 'status', 'foodStatus', 'drinkStatus', 'isEdited', 'updatedBy', 'updatedAt'
+          ])
+          && (
+            (prev == 'pending' && next == 'pending')
+            || (prev == 'cooking' && next in ['cooking', 'ready'] && kasirSetting('kasirCanEditWhileCooking', false) == true)
+          ))
         ||
-        // Pembayaran oleh kasir
+        // Pembayaran oleh kasir (tanpa ubah status/item)
         (prev != 'cancelled'
-          && (next == prev || (prev == 'ready' && next == 'completed'))
+          && next == prev
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'paymentStatus', 'paymentMethod', 'discountAmount', 'paidAmount', 'changeAmount',
+            'paidAt', 'paidBy', 'status', 'updatedBy', 'updatedAt'
+          ]))
+        ||
+        // Pembayaran + penyelesaian pesanan oleh kasir (hanya ready -> completed)
+        (prev == 'ready'
+          && next == 'completed'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'paymentStatus', 'paymentMethod', 'discountAmount', 'paidAmount', 'changeAmount',
             'paidAt', 'paidBy', 'status', 'foodStatus', 'drinkStatus', 'items', 'updatedBy', 'updatedAt'
-          ]))
+          ])
+          && (nextFood == 'none' || nextFood == 'completed')
+          && (!(prevFood == 'none' && ('foodStatus' in resource.data)) || nextFood == 'none')
+          && (prevFood == 'none' || nextFood == 'completed')
+          && (nextDrink == 'none' || nextDrink == 'completed')
+          && (!(prevDrink == 'none' && ('drinkStatus' in resource.data)) || nextDrink == 'none')
+          && (prevDrink == 'none' || nextDrink == 'completed')
+          && isValidKitchenItemsUpdate())
       );
     }
 
@@ -265,6 +302,7 @@ service cloud.firestore {
       allow create: if isActiveAdmin() && isValidTable(request.resource.data);
       allow delete: if isActiveAdmin();
       allow update: if isValidTable(request.resource.data)
+        && areImmutableFieldsUnchanged(['createdAt'])
         && (
           isActiveAdmin()
           || (isActiveKasir() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'note', 'updatedBy', 'updatedAt']))
