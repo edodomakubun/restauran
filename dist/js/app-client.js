@@ -1119,6 +1119,13 @@ export function renderMobileBottomNav(activeId, user) {
   const nav = document.getElementById('mobile-bottom-nav');
   if (!nav || !user?.role) return;
 
+  if (user.role === 'chef') {
+    nav.replaceChildren();
+    nav.classList.add('d-none');
+    document.body.classList.remove('has-mobile-nav');
+    return;
+  }
+
   let items = [];
   if (user.role === 'admin') {
     items = [
@@ -1136,12 +1143,9 @@ export function renderMobileBottomNav(activeId, user) {
       { id: 'pembayaran', label: 'Bayar', href: './pembayaran.html', icon: 'bi-cash-coin' },
       { id: 'more', label: 'Lainnya', href: '#menu-sidebar', icon: 'bi-grid' },
     ];
-  } else {
-    items = [
-      { id: 'chef', label: 'Layar Chef', href: './chef.html', icon: 'bi-fire' },
-    ];
   }
 
+  nav.classList.remove('d-none');
   nav.replaceChildren();
   document.body.classList.add('has-mobile-nav');
 
