@@ -1,10 +1,12 @@
-const CACHE_NAME = 'restoorder-shell-v47';
+const CACHE_NAME = 'restoorder-shell-v54';
 const APP_SHELL_ASSETS = [
   './css/adminlte.css',
   './css/restaurant.css',
   './js/adminlte.js',
   './js/app-client.js',
   './js/app-router.js',
+  './js/brand-svg.js',
+  './js/vendor/svg.esm.js',
   './js/sales-report.js',
   './js/xlsx-export.js',
   './js/pages/dashboard.js',
@@ -22,6 +24,7 @@ const APP_SHELL_ASSETS = [
   './assets/img/app-icon.svg',
   './assets/img/app-icon-192.png',
   './assets/img/app-icon-512.png',
+  './assets/img/qr-bayar.jpg',
   './manifest.webmanifest',
 ];
 

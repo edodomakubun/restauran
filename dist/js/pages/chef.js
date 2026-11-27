@@ -9,6 +9,7 @@ import {
   formatTimeShort,
   showToast,
   statusLabel,
+  triggerMicroClass,
 } from '../app-client.js';
 
 const INLINE_LIMIT_PER_SECTION = 3;
@@ -355,10 +356,18 @@ export function mount(ctx) {
     const cntCooking = document.getElementById('cnt-cooking');
     const cntReady = document.getElementById('cnt-ready');
     const cntCancelled = document.getElementById('cnt-cancelled');
-    if (cntPending) cntPending.textContent = orders.filter((o) => o.status === 'pending').length;
-    if (cntCooking) cntCooking.textContent = orders.filter((o) => o.status === 'cooking').length;
-    if (cntReady) cntReady.textContent = orders.filter((o) => o.status === 'ready').length;
-    if (cntCancelled) cntCancelled.textContent = orders.filter((o) => o.status === 'cancelled').length;
+    const setStatWithPop = (node, nextVal) => {
+      if (!node) return;
+      const str = String(nextVal);
+      if (node.textContent !== str && node.textContent !== '' && node.textContent !== '0') {
+        triggerMicroClass(node, 'micro-pop', 260);
+      }
+      node.textContent = str;
+    };
+    setStatWithPop(cntPending, orders.filter((o) => o.status === 'pending').length);
+    setStatWithPop(cntCooking, orders.filter((o) => o.status === 'cooking').length);
+    setStatWithPop(cntReady, orders.filter((o) => o.status === 'ready').length);
+    setStatWithPop(cntCancelled, orders.filter((o) => o.status === 'cancelled').length);
 
     if (detailOrderId) {
       const currentOrd = orders.find((o) => o.id === detailOrderId);

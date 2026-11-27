@@ -1,6 +1,7 @@
 // App-Shell SPA Router: perpindahan halaman instan (< 5ms dari prefetch cache)
 // tanpa full-page reload, menjaga koneksi realtime Firestore & AudioContext tetap hidup.
 
+import { renderAnimatedBrandLogo, renderAnimatedBrandTitle } from './brand-svg.js';
 import {
   getStoreSnapshot,
   homePageForRole,
@@ -321,12 +322,9 @@ function showPostLoginSplashIfNeeded() {
   splash.className = 'app-welcome-splash';
   splash.innerHTML = `
     <div class="app-welcome-card">
-      <div class="app-welcome-logo-wrap">
-        <span class="app-welcome-ring"></span>
-        <img src="./assets/img/app-icon.svg" width="68" height="68" alt="" class="app-welcome-logo" />
-      </div>
+      <div class="app-welcome-logo-wrap"></div>
       <div class="app-welcome-greeting"></div>
-      <h1 class="app-welcome-title">Dapur Laris Manis</h1>
+      <h1 class="app-welcome-title" aria-label="Dapur Laris Manis" style="min-height: 54px;"></h1>
       <p class="app-welcome-tagline">Laris Manis untuk yang Manis-Manis</p>
       <div class="app-welcome-bar"><span></span></div>
       <div class="app-welcome-hint">Ketuk di mana saja untuk masuk lebih cepat</div>
@@ -335,6 +333,15 @@ function showPostLoginSplashIfNeeded() {
   const greetingEl = splash.querySelector('.app-welcome-greeting');
   if (greetingEl) greetingEl.textContent = getWelcomeGreetingText();
   document.body.appendChild(splash);
+
+  const logoWrap = splash.querySelector('.app-welcome-logo-wrap');
+  const titleWrap = splash.querySelector('.app-welcome-title');
+  if (!renderAnimatedBrandLogo(logoWrap, { size: 78, loopPulse: true, interactive: false }) && logoWrap) {
+    logoWrap.innerHTML = '<img src="./assets/img/app-icon.svg" width="68" height="68" alt="" class="app-welcome-logo" />';
+  }
+  if (!renderAnimatedBrandTitle(titleWrap, { text: 'Dapur Laris Manis', fontSize: 30, width: 340, height: 54, delayMs: 80 }) && titleWrap) {
+    titleWrap.textContent = 'Dapur Laris Manis';
+  }
 
   let dismissed = false;
   const dismiss = () => {

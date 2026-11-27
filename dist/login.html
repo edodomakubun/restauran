@@ -73,8 +73,8 @@
     <main class="login-box">
       <!-- Branding -->
       <div class="login-brand text-center mb-3">
-        <img src="./assets/img/app-icon.svg" width="52" height="52" alt="" class="login-brand-icon mb-2">
-        <h1 class="login-brand-name mb-0 fw-bold">Dapur Laris Manis</h1>
+        <div id="login-brand-logo" class="d-inline-block mb-2" style="width: 56px; height: 56px;"></div>
+        <h1 id="login-brand-title" class="login-brand-name mb-0 fw-bold" aria-label="Dapur Laris Manis" style="min-height: 46px;"></h1>
         <p class="login-brand-tagline text-secondary mb-0">Laris Manis untuk yang Manis-Manis</p>
       </div>
 
@@ -154,6 +154,7 @@
     ></script>
     <script src="./js/adminlte.js"></script>
     <script type="module">
+      import { renderAnimatedBrandLogo, renderAnimatedBrandTitle } from './js/brand-svg.js';
       import {
         bindFullscreenEnhancement,
         getRuntimeConfig,
@@ -162,10 +163,19 @@
         loginWithEmailPassword,
         playChime,
         registerServiceWorker,
+        triggerMicroClass,
       } from './js/app-client.js';
 
       registerServiceWorker();
       bindFullscreenEnhancement();
+      const logoEl = document.getElementById('login-brand-logo');
+      const titleEl = document.getElementById('login-brand-title');
+      if (!renderAnimatedBrandLogo(logoEl, { size: 56, loopPulse: false, interactive: true }) && logoEl) {
+        logoEl.innerHTML = '<img src="./assets/img/app-icon.svg" width="56" height="56" alt="" class="login-brand-icon mb-0">';
+      }
+      if (!renderAnimatedBrandTitle(titleEl, { text: 'Dapur Laris Manis', fontSize: 27, width: 310, height: 46, delayMs: 40 }) && titleEl) {
+        titleEl.textContent = 'Dapur Laris Manis';
+      }
 
       const form = document.getElementById('login-form');
       const emailEl = document.getElementById('loginEmail');
@@ -174,9 +184,12 @@
       const submitBtn = document.getElementById('login-submit');
       const demoBox = document.getElementById('demo-accounts-box');
 
-      document.getElementById('toggle-pass').addEventListener('click', () => {
+      document.getElementById('toggle-pass').addEventListener('click', (e) => {
         const isPass = passEl.type === 'password';
         passEl.type = isPass ? 'text' : 'password';
+        const icon = e.currentTarget.querySelector('i');
+        if (icon) icon.className = isPass ? 'bi bi-eye-slash' : 'bi bi-eye';
+        triggerMicroClass(e.currentTarget, 'micro-pop', 220);
       });
 
       for (const btn of document.querySelectorAll('.demo-fill')) {
@@ -251,6 +264,7 @@
         } catch (err) {
           errEl.textContent = err.message || 'Gagal masuk.';
           errEl.classList.remove('d-none');
+          triggerMicroClass(document.querySelector('.login-card'), 'micro-shake', 360);
           submitBtn.disabled = false;
           submitBtn.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i> Masuk';
         }

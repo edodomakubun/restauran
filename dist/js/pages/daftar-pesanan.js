@@ -8,6 +8,7 @@ import {
   formatTimeShort,
   showToast,
   statusLabel,
+  triggerMicroClass,
 } from '../app-client.js';
 
 function getSectionStatuses(ord) {
@@ -34,7 +35,7 @@ function kasirOrderPriorityRank(ord) {
 }
 
 function sortKasirOrders(list) {
-  return [...list].sort((a, b) => {
+  return list.toSorted((a, b) => {
     const rankDiff = kasirOrderPriorityRank(a) - kasirOrderPriorityRank(b);
     if (rankDiff !== 0) return rankDiff;
     const tA = a.updatedAt || a.createdAt || '';
@@ -310,8 +311,11 @@ export function mount(ctx) {
 
     if (countBadge) countBadge.textContent = String(statusCounts.all);
     if (readyBadge) {
-      readyBadge.textContent = `${statusCounts.ready} Siap`;
+      const nextText = `${statusCounts.ready} Siap`;
+      const changed = readyBadge.textContent !== nextText && statusCounts.ready > 0;
+      readyBadge.textContent = nextText;
       readyBadge.classList.toggle('d-none', statusCounts.ready === 0);
+      if (changed) triggerMicroClass(readyBadge, 'micro-pop', 260);
     }
 
     for (const btn of document.querySelectorAll('.orders-status-btn')) {

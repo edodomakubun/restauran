@@ -1,5 +1,5 @@
 // Modul halaman Kelola Akun Staf (pengguna.html - Admin)
-import { apiFetch, el, refreshLocalCollections, roleLabel, showToast } from '../app-client.js';
+import { apiFetch, el, refreshLocalCollections, roleLabel, showToast, triggerMicroClass } from '../app-client.js';
 
 export function mount(ctx) {
   const { session, signal, subscribeStore } = ctx;
@@ -73,12 +73,14 @@ export function mount(ctx) {
                     {
                       type: 'button',
                       className: `btn btn-xs ${u.isActive ? 'btn-outline-warning' : 'btn-outline-success'}`,
-                      onClick: async () => {
+                      onClick: async (e) => {
+                        const row = e.currentTarget.closest('tr');
                         try {
                           await apiFetch(`/api/users/${uid}`, {
                             method: 'PATCH',
                             body: JSON.stringify({ isActive: !u.isActive }),
                           });
+                          triggerMicroClass(row, 'row-flash', 550);
                           showToast(`Akun ${displayName} ${u.isActive ? 'dinonaktifkan' : 'diaktifkan'}.`, 'info');
                           await refreshLocalCollections(session.user.role);
                         } catch (err) {

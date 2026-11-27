@@ -3,10 +3,12 @@ import {
   apiFetch,
   applyOptimisticOrderPatch,
   el,
+  flashButtonFeedback,
   formatRupiah,
   formatTimeShort,
   showToast,
   statusLabel,
+  triggerMicroClass,
 } from '../app-client.js';
 
 const METHOD_LABELS = {
@@ -83,6 +85,7 @@ export function mount(ctx) {
       btn.className = `btn btn-sm ${active ? 'btn-primary' : 'btn-outline-secondary'} pay-method-btn`;
     }
     document.getElementById('pay-cash-wrap')?.classList.toggle('d-none', paymentMethod !== 'cash');
+    document.getElementById('pay-qris-wrap')?.classList.toggle('d-none', paymentMethod !== 'qris');
   };
 
   const renderReceipt = (ord, previewOverride = null) => {
@@ -157,11 +160,23 @@ export function mount(ctx) {
     const changeAmt = paymentMethod === 'cash' ? Math.max(0, paidAmt - netTotal) : 0;
 
     const netEl = document.getElementById('pay-net-total');
+    const qrisAmtEl = document.getElementById('pay-qris-amount');
     const chgEl = document.getElementById('pay-change-display');
-    if (netEl) netEl.textContent = formatRupiah(netTotal);
+    const nextNetText = formatRupiah(netTotal);
+    const nextChgText = formatRupiah(changeAmt);
+    if (netEl) {
+      const changed = netEl.textContent !== nextNetText && netEl.textContent !== '';
+      netEl.textContent = nextNetText;
+      if (changed) triggerMicroClass(netEl, 'micro-pop', 260);
+    }
+    if (qrisAmtEl) {
+      qrisAmtEl.textContent = nextNetText;
+    }
     if (chgEl) {
-      chgEl.textContent = formatRupiah(changeAmt);
+      const changed = chgEl.textContent !== nextChgText && chgEl.textContent !== '';
+      chgEl.textContent = nextChgText;
       chgEl.className = `fw-bold fs-5 ${paymentMethod === 'cash' && paidAmt < netTotal ? 'text-danger' : 'text-success'}`;
+      if (changed) triggerMicroClass(chgEl, 'micro-pop', 260);
     }
 
     if (ord.paymentStatus !== 'paid') {
@@ -489,11 +504,13 @@ export function mount(ctx) {
 
   document.getElementById('btn-copy-receipt')?.addEventListener(
     'click',
-    async () => {
+    async (e) => {
+      const btn = e.currentTarget;
       const ord = getSelectedOrder();
       if (!ord) return;
       try {
         await navigator.clipboard.writeText(buildReceiptText(ord));
+        flashButtonFeedback(btn, '<i class="bi bi-check2 me-1"></i>Tersalin ✓', 1500);
         showToast('Teks struk berhasil disalin ke clipboard.', 'success');
       } catch {
         showToast('Gagal menyalin teks struk.', 'warning');

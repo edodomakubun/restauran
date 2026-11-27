@@ -1,5 +1,5 @@
 // Modul halaman Dasbor Restoran (index.html)
-import { el, formatRupiah, statusLabel } from '../app-client.js';
+import { el, formatRupiah, statusLabel, triggerMicroClass } from '../app-client.js';
 
 export function mount(ctx) {
   const { session, subscribeStore } = ctx;
@@ -38,10 +38,18 @@ export function mount(ctx) {
     const cEl = document.getElementById('stat-cooking');
     const rEl = document.getElementById('stat-ready');
     const revEl = document.getElementById('stat-revenue');
-    if (pEl) pEl.textContent = pending;
-    if (cEl) cEl.textContent = cooking;
-    if (rEl) rEl.textContent = ready;
-    if (revEl) revEl.textContent = formatRupiah(revenue);
+    const setStatVal = (node, val) => {
+      if (!node) return;
+      const str = String(val);
+      if (node.textContent !== str && node.textContent !== '' && node.textContent !== '0' && node.textContent !== '-') {
+        triggerMicroClass(node, 'micro-pop', 260);
+      }
+      node.textContent = str;
+    };
+    setStatVal(pEl, pending);
+    setStatVal(cEl, cooking);
+    setStatVal(rEl, ready);
+    setStatVal(revEl, formatRupiah(revenue));
 
     const tbody = document.getElementById('recent-orders-body');
     if (!tbody) return;

@@ -9,6 +9,7 @@ import {
   renderPagination,
   showToast,
   statusLabel,
+  triggerMicroClass,
   upsertOrderInStore,
 } from '../app-client.js';
 
@@ -88,6 +89,9 @@ export function mount(ctx) {
   let storeEmissions = 0;
   let missingEditTimer = null;
   let cart = [];
+  let prevCartTotalKey = '';
+  let enterCartItem = null;
+  let flashCartItem = null;
   const expandedNoteItems = new WeakSet();
   const editingPriceItems = new WeakSet();
   let currentStep = 0;
@@ -184,6 +188,7 @@ export function mount(ctx) {
       const tableNumber = (tableInput?.value || '').trim();
       if (serviceType === 'dine_in' && !tableNumber) {
         tableInput?.classList.add('is-invalid');
+        triggerMicroClass(tableInput, 'micro-shake', 360);
         tableInput?.focus();
         showToast('Nomor meja wajib diisi untuk layanan Makan di Tempat.', 'warning');
         return false;
@@ -531,7 +536,9 @@ export function mount(ctx) {
             ),
           ]);
 
-      const row = el('div', { className: 'list-group-item py-1 px-2' }, [
+      const rowExtraCls =
+        item === enterCartItem ? ' cart-row-enter' : item === flashCartItem ? ' cart-row-flash' : '';
+      const row = el('div', { className: `list-group-item py-1 px-2${rowExtraCls}` }, [
         el('div', { className: 'd-flex flex-wrap justify-content-between align-items-center gap-1' }, [
           el('div', { className: 'flex-grow-1 min-w-0' }, [
             el('div', { className: 'fw-semibold small text-break' }, [catPill, item.name, variantBadge, kitchenStatusBadge]),
@@ -547,6 +554,7 @@ export function mount(ctx) {
                 onClick: () => {
                   if (cart[idx].qty > 1) {
                     cart[idx].qty -= 1;
+                    flashCartItem = cart[idx];
                   } else {
                     cart.splice(idx, 1);
                   }
@@ -560,7 +568,7 @@ export function mount(ctx) {
                 textContent: '+',
                 onClick: () => {
                   if (editingOrderId && (cart[idx].itemStatus === 'ready' || cart[idx].itemStatus === 'completed')) {
-                    cart.splice(idx + 1, 0, {
+                    const extra = {
                       menuItemId: item.menuItemId || null,
                       name: item.name,
                       category: item.category,
@@ -568,12 +576,15 @@ export function mount(ctx) {
                       price: Number(item.price || 0),
                       note: item.note || '',
                       itemStatus: 'pending',
-                    });
+                    };
+                    cart.splice(idx + 1, 0, extra);
+                    enterCartItem = extra;
                     renderCart();
                     showToast(`1 porsi baru "${item.name}" ditambahkan ke antrean dapur.`, 'info');
                     return;
                   }
                   cart[idx].qty += 1;
+                  flashCartItem = cart[idx];
                   renderCart();
                 },
               }),
@@ -598,7 +609,17 @@ export function mount(ctx) {
       wrap.appendChild(row);
     });
 
+    enterCartItem = null;
+    flashCartItem = null;
+    const totalKey = `${totalQty}:${total}`;
+    const totalChanged = prevCartTotalKey !== '' && prevCartTotalKey !== totalKey;
+    prevCartTotalKey = totalKey;
     totalEl.textContent = formatRupiah(total);
+    if (totalChanged) {
+      triggerMicroClass(totalEl, 'micro-pop', 260);
+      triggerMicroClass(badgeEl, 'micro-pop', 260);
+    }
+    renderMenu();
   };
 
   const addToCart = (item) => {
@@ -613,15 +634,18 @@ export function mount(ctx) {
     );
     if (idx >= 0) {
       cart[idx].qty += item.qty || 1;
+      flashCartItem = cart[idx];
     } else {
-      cart.push({
+      const created = {
         menuItemId: item.menuItemId || null,
         name: item.name,
         category: item.category,
         qty: item.qty || 1,
         price: Number(item.price || 0),
         note: item.note || '',
-      });
+      };
+      cart.push(created);
+      enterCartItem = created;
     }
     renderCart();
   };
@@ -684,8 +708,15 @@ export function mount(ctx) {
     menuPage = pg.page;
     const pageItems = filtered.slice(pg.startIndex, pg.endIndex);
 
+    const cartQtyByMenu = new Map();
+    for (const c of cart) {
+      const k = `${c.category}|${String(c.name || '').trim().toLowerCase()}`;
+      cartQtyByMenu.set(k, (cartQtyByMenu.get(k) || 0) + Number(c.qty || 0));
+    }
+
     for (const m of pageItems) {
       const avail = m.isAvailable !== false;
+      const inCartQty = cartQtyByMenu.get(`${m.category}|${String(m.name || '').trim().toLowerCase()}`) || 0;
       const catBadge =
         m.category === 'makanan'
           ? el('span', { className: 'badge text-bg-warning', textContent: 'Makanan' })
@@ -696,7 +727,7 @@ export function mount(ctx) {
         {
           type: 'button',
           title: m.name,
-          className: `menu-pick-tile w-100 h-100 text-start border rounded p-1 bg-body d-flex flex-column justify-content-between${avail ? '' : ' menu-unavailable'}`,
+          className: `menu-pick-tile w-100 h-100 text-start border rounded p-1 bg-body d-flex flex-column justify-content-between${avail ? '' : ' menu-unavailable'}${inCartQty > 0 ? ' tile-added' : ''}`,
           onClick: () => {
             if (!avail) {
               showToast(`Menu "${m.name}" sedang ditandai habis.`, 'warning');
@@ -715,7 +746,9 @@ export function mount(ctx) {
           el('div', { className: 'd-flex justify-content-between align-items-center gap-1 w-100 mb-1' }, [
             catBadge,
             avail
-              ? el('span', { className: 'text-primary small fw-bold', style: 'font-size: 0.72rem;' }, [el('i', { className: 'bi bi-plus-circle-fill' })])
+              ? inCartQty > 0
+                ? el('span', { className: 'badge rounded-pill text-bg-primary menu-qty-pill', textContent: `${inCartQty}×` })
+                : el('span', { className: 'text-primary small fw-bold', style: 'font-size: 0.72rem;' }, [el('i', { className: 'bi bi-plus-circle-fill' })])
               : el('span', { className: 'badge text-bg-secondary', textContent: 'Habis' }),
           ]),
           el('div', { className: 'fw-semibold menu-pick-title text-truncate w-100', textContent: m.name }),

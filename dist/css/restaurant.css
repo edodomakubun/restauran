@@ -5,6 +5,10 @@
 [data-bs-theme='dark'] {
   --lte-sidebar-width: 222px;
   --bs-body-font-size: 0.905rem;
+  --ui-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ui-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ui-dur-fast: 130ms;
+  --ui-dur-base: 200ms;
 }
 
 [data-bs-theme='light'] {
@@ -54,7 +58,19 @@ body {
   font-size: 0.865rem;
   font-weight: 500;
   border-radius: 0.45rem;
-  transition: background-color 0.14s ease, color 0.14s ease;
+  transition: background-color var(--ui-dur-fast) ease, color var(--ui-dur-fast) ease, transform var(--ui-dur-fast) var(--ui-ease-out);
+}
+
+.sidebar-menu .nav-link .nav-icon {
+  transition: transform var(--ui-dur-fast) var(--ui-ease-out);
+}
+
+.sidebar-menu .nav-link:hover .nav-icon {
+  transform: translateX(2px);
+}
+
+.sidebar-menu .nav-link:active {
+  transform: scale(0.985);
 }
 
 .sidebar-menu .nav-link.active {
@@ -194,9 +210,14 @@ body {
   justify-content: center;
   font-size: 1.15rem;
   opacity: 1 !important;
-  transform: none !important;
+  transform: scale(1);
+  transition: transform var(--ui-dur-base) var(--ui-ease-spring);
   background-color: rgba(var(--bs-primary-rgb), 0.1);
   color: var(--bs-primary);
+}
+
+.small-box:hover .small-box-icon {
+  transform: scale(1.06);
 }
 
 .small-box.text-bg-warning .small-box-icon {
@@ -239,6 +260,7 @@ body {
 .form-select {
   border-radius: 0.45rem;
   border-color: var(--bs-border-color);
+  transition: border-color var(--ui-dur-fast) ease, box-shadow var(--ui-dur-fast) ease;
 }
 
 .form-control:focus,
@@ -246,9 +268,25 @@ body {
   box-shadow: 0 0 0 3px rgba(var(--bs-primary-rgb), 0.14);
 }
 
+.form-check-input {
+  transition: background-color var(--ui-dur-fast) ease, border-color var(--ui-dur-fast) ease, background-position var(--ui-dur-fast) var(--ui-ease-out), transform 100ms ease;
+  cursor: pointer;
+}
+
+.form-check-input:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
 .btn {
   border-radius: 0.45rem;
-  transition: background-color 0.14s ease, border-color 0.14s ease, transform 0.1s ease;
+  transition: background-color var(--ui-dur-fast) ease, border-color var(--ui-dur-fast) ease, color var(--ui-dur-fast) ease, box-shadow var(--ui-dur-fast) ease, transform 100ms var(--ui-ease-out);
+}
+
+.btn:focus-visible,
+.page-link:focus-visible,
+.nav-link:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(var(--bs-primary-rgb), 0.22);
 }
 
 .badge {
@@ -256,10 +294,18 @@ body {
   letter-spacing: 0.01em;
 }
 
+.table > tbody > tr {
+  transition: background-color var(--ui-dur-fast) ease;
+}
+
 .modal-content {
   border-radius: 0.85rem;
   border: 1px solid var(--bs-border-color);
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
+}
+
+.modal.fade .modal-dialog {
+  transition: transform var(--ui-dur-base) var(--ui-ease-out);
 }
 
 .modal-backdrop.show {
@@ -502,6 +548,22 @@ body {
   max-width: calc(100vw - 1rem);
 }
 
+@keyframes toastSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.app-toast-container .toast.showing,
+.app-toast-container .toast.show {
+  animation: toastSlideUp var(--ui-dur-base) var(--ui-ease-out);
+}
+
 /* Mobile Bottom Navigation Bar ala aplikasi POS/KDS */
 .mobile-bottom-nav {
   position: fixed;
@@ -542,6 +604,11 @@ body {
 .mobile-bottom-item i {
   font-size: 1.05rem;
   line-height: 1.1;
+  transition: transform var(--ui-dur-fast) var(--ui-ease-spring);
+}
+
+.mobile-bottom-item.active i {
+  transform: translateY(-1px);
 }
 
 .mobile-bottom-item span {
@@ -581,6 +648,16 @@ body {
 .login-brand-name {
   font-size: 1.65rem;
   letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--bs-emphasis-color);
+}
+
+.brand-svg-title-text {
+  fill: #0f172a;
+}
+
+[data-bs-theme='dark'] .brand-svg-title-text {
+  fill: #f8fafc;
 }
 .login-brand-tagline {
   font-size: 0.82rem;
@@ -985,9 +1062,9 @@ body {
   font-size: 1.85rem;
   font-weight: 800;
   letter-spacing: -0.02em;
-  margin: 0 0 0.3rem;
+  line-height: 1;
+  margin: 0 0 0.35rem;
   color: var(--bs-emphasis-color);
-  animation: welcomeFadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both;
 }
 
 .app-welcome-tagline {
@@ -1102,84 +1179,189 @@ body {
   font-size: 0.7rem;
 }
 
-  /* 1. Efek tekan & hover kartu menu */
-  .menu-pick-tile {
-    position: relative;
-    transition: transform 0.14s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.14s ease, border-color 0.14s ease;
-  }
-  .menu-pick-tile:not(.menu-unavailable):hover {
-    transform: translateY(-2px);
-    border-color: var(--bs-primary) !important;
-    box-shadow: 0 4px 10px rgba(13, 110, 253, 0.12);
-  }
-  .menu-pick-tile:not(.menu-unavailable):active {
-    transform: scale(0.95);
-  }
-  .menu-pick-tile.tile-added {
-    border-color: var(--bs-primary) !important;
-    background-color: rgba(13, 110, 253, 0.04) !important;
-  }
-  .menu-qty-pill {
-    font-size: 0.7rem;
-    padding: 0.15rem 0.42rem;
-    animation: popScale 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
+/* 1. Efek tekan & hover kartu menu */
+.menu-pick-tile {
+  position: relative;
+  transition: transform var(--ui-dur-fast) var(--ui-ease-out), box-shadow var(--ui-dur-fast) ease, border-color var(--ui-dur-fast) ease, background-color var(--ui-dur-fast) ease;
+}
 
-  /* 2. Animasi denyut untuk badge keranjang, total harga, & angka qty */
-  @keyframes popScale {
-    0% { transform: scale(1); }
-    45% { transform: scale(1.16); }
-    100% { transform: scale(1); }
-  }
-  .micro-pop {
-    animation: popScale 0.24s cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
+.menu-pick-tile:not(.menu-unavailable):hover {
+  transform: translateY(-1.5px);
+  border-color: var(--bs-primary) !important;
+  box-shadow: 0 4px 10px rgba(var(--bs-primary-rgb), 0.12);
+}
 
-  /* 3. Animasi baris item keranjang baru & highlight saat qty bertambah */
-  @keyframes cartSlideIn {
-    from {
-      opacity: 0;
-      transform: translateX(12px);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-  @keyframes cartRowFlash {
-    0% { background-color: rgba(13, 110, 253, 0.16); }
-    100% { background-color: transparent; }
-  }
-  .cart-row-enter {
-    animation: cartSlideIn 0.2s ease-out;
-  }
-  .cart-row-flash {
-    animation: cartRowFlash 0.45s ease-out;
-  }
+.menu-pick-tile:not(.menu-unavailable):active {
+  transform: scale(0.96);
+}
 
-  /* 4. Transisi langkah wizard */
-  @keyframes wizardFadeSlide {
-    from {
-      opacity: 0;
-      transform: translateY(6px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  .wizard-step:not(.d-none) {
-    animation: wizardFadeSlide 0.2s ease-out;
-  }
+.menu-pick-tile.tile-added {
+  border-color: var(--bs-primary) !important;
+  background-color: rgba(var(--bs-primary-rgb), 0.045) !important;
+}
 
-  /* 5. Efek taktil tombol chip catatan, layanan, dan meja */
-  .quick-note-chip,
-  .service-type-btn,
-  #table-quick-chips .btn {
-    transition: transform 0.12s ease, background-color 0.15s ease, color 0.15s ease;
+.menu-qty-pill {
+  font-size: 0.68rem;
+  padding: 0.14rem 0.4rem;
+  font-variant-numeric: tabular-nums;
+  animation: popScale 0.22s var(--ui-ease-spring);
+}
+
+/* 2. Animasi denyut untuk badge keranjang, total harga, KPI & angka qty */
+@keyframes popScale {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.micro-pop {
+  display: inline-block;
+  animation: popScale 0.22s var(--ui-ease-spring);
+}
+
+/* 3. Animasi getar halus untuk validasi form / gagal masuk */
+@keyframes microShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-5px); }
+  45% { transform: translateX(4px); }
+  70% { transform: translateX(-3px); }
+  88% { transform: translateX(2px); }
+}
+
+.micro-shake {
+  animation: microShake 0.34s var(--ui-ease-out);
+}
+
+/* 4. Animasi baris item keranjang baru & highlight saat status/qty berubah */
+@keyframes cartSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
   }
-  .quick-note-chip:active,
-  .service-type-btn:active,
-  #table-quick-chips .btn:active {
-    transform: scale(0.92);
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
+}
+
+@keyframes cartRowFlash {
+  0% { background-color: rgba(var(--bs-primary-rgb), 0.14); }
+  100% { background-color: transparent; }
+}
+
+.cart-row-enter {
+  animation: cartSlideIn var(--ui-dur-base) var(--ui-ease-out);
+}
+
+.cart-row-flash,
+.row-flash {
+  animation: cartRowFlash 0.55s ease-out;
+}
+
+/* 5. Transisi langkah wizard & grafik bar laporan */
+@keyframes wizardFadeSlide {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wizard-step:not(.d-none) {
+  animation: wizardFadeSlide var(--ui-dur-base) var(--ui-ease-out);
+}
+
+@keyframes reportBarGrow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.report-bar-fill {
+  transform-origin: left center;
+  animation: reportBarGrow 0.35s var(--ui-ease-out);
+}
+
+/* 6. Efek taktil chip catatan, layanan, meja, pembayaran, & kartu meja/chef */
+.quick-note-chip,
+.service-type-btn,
+#table-quick-chips .btn,
+.pay-method-btn,
+.pay-quick-cash,
+.orders-status-btn,
+.chef-filter,
+.report-mode-btn {
+  transition: transform 110ms var(--ui-ease-out), background-color var(--ui-dur-fast) ease, color var(--ui-dur-fast) ease, border-color var(--ui-dur-fast) ease;
+}
+
+.quick-note-chip:active,
+.service-type-btn:active,
+#table-quick-chips .btn:active,
+.pay-method-btn:active,
+.pay-quick-cash:active {
+  transform: scale(0.94);
+}
+
+#tables-grid .card {
+  transition: transform var(--ui-dur-fast) var(--ui-ease-out), box-shadow var(--ui-dur-fast) ease, border-color var(--ui-dur-fast) ease;
+}
+
+#tables-grid .card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08) !important;
+}
+
+.chef-ticket:hover {
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08) !important;
+}
+
+#pay-orders-list > button {
+  transition: border-color var(--ui-dur-fast) ease, background-color var(--ui-dur-fast) ease, transform 110ms var(--ui-ease-out), box-shadow var(--ui-dur-fast) ease;
+}
+
+#pay-orders-list > button:active {
+  transform: scale(0.985);
+}
+
+/* 7. Modern Web Guidance: validasi setelah interaksi & tunda render konten di bawah lipatan */
+:is(.form-control, .form-select):user-invalid {
+  border-color: var(--bs-danger);
+}
+
+:is(.form-control, .form-select):user-invalid:focus {
+  box-shadow: 0 0 0 3px rgba(var(--bs-danger-rgb), 0.16);
+}
+
+:is(.form-control, .form-select)[required]:user-valid {
+  border-color: var(--bs-success);
+}
+
+#chef-grid > :nth-child(n + 7),
+#orders-mobile-list > :nth-child(n + 7),
+#tables-grid > :nth-child(n + 9) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto none auto 220px;
+}
+
+#orders-table-body > tr:nth-child(n + 15) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto none auto 64px;
+}
+
+/* 8. Aksesibilitas: hormati preferensi pengurangan gerak perangkat */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,5 +1,5 @@
 // Modul halaman Kelola Daftar Menu (menu.html - Admin)
-import { apiFetch, el, formatRupiah, refreshLocalCollections, renderPagination, showToast } from '../app-client.js';
+import { apiFetch, el, formatRupiah, refreshLocalCollections, renderPagination, showToast, triggerMicroClass } from '../app-client.js';
 
 const MENU_PAGE_SIZE = 10;
 
@@ -86,12 +86,14 @@ export function mount(ctx) {
               {
                 type: 'button',
                 className: `btn btn-xs ${avail ? 'btn-success' : 'btn-secondary'}`,
-                onClick: async () => {
+                onClick: async (e) => {
+                  const row = e.currentTarget.closest('tr');
                   try {
                     await apiFetch(`/api/menu/${m.id}`, {
                       method: 'PUT',
                       body: JSON.stringify({ isAvailable: !avail }),
                     });
+                    triggerMicroClass(row, 'row-flash', 550);
                     showToast(`Status "${m.name}" diperbarui.`, 'info');
                     await refreshLocalCollections(session.user.role);
                   } catch (err) {

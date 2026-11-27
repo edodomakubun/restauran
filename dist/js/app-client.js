@@ -114,6 +114,37 @@ export function el(tag, attrs = {}, children = []) {
   return node;
 }
 
+export function triggerMicroClass(node, className = 'micro-pop', durationMs = 300) {
+  if (!node || !node.classList) return;
+  node.classList.remove(className);
+  void node.offsetWidth;
+  node.classList.add(className);
+  if (node._microTimers?.[className]) {
+    clearTimeout(node._microTimers[className]);
+  }
+  node._microTimers = node._microTimers || {};
+  node._microTimers[className] = setTimeout(() => {
+    node.classList.remove(className);
+  }, durationMs);
+}
+
+export function flashButtonFeedback(btn, tempHtml, durationMs = 1500) {
+  if (!btn) return;
+  if (!btn.dataset.origHtml) {
+    btn.dataset.origHtml = btn.innerHTML;
+  }
+  const origHtml = btn.dataset.origHtml;
+  if (btn._flashTimer) clearTimeout(btn._flashTimer);
+  btn.innerHTML = tempHtml;
+  triggerMicroClass(btn, 'micro-pop', 260);
+  btn._flashTimer = setTimeout(() => {
+    if (btn.isConnected) {
+      btn.innerHTML = origHtml;
+    }
+    delete btn.dataset.origHtml;
+  }, durationMs);
+}
+
 export function showToast(message, variant = 'primary') {
   let container = document.getElementById('app-toast-container');
   if (!container) {

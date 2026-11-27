@@ -1,5 +1,5 @@
 // Modul halaman Manajemen Meja Real-Time (meja.html - Admin & Kasir)
-import { apiFetch, el, formatRupiah, showToast, statusLabel } from '../app-client.js';
+import { apiFetch, el, formatRupiah, showToast, statusLabel, triggerMicroClass } from '../app-client.js';
 
 function getActiveOrderForTable(orders, tableNumber) {
   const num = String(tableNumber || '').trim().toLowerCase();
@@ -92,10 +92,19 @@ export function mount(ctx) {
     const cntOcc = enriched.filter((t) => t.effectiveStatus === 'occupied').length;
     const cntRes = enriched.filter((t) => t.effectiveStatus === 'reserved').length;
     const cntClean = enriched.filter((t) => t.effectiveStatus === 'cleaning').length;
-    document.getElementById('tbl-cnt-available').textContent = String(cntAvail);
-    document.getElementById('tbl-cnt-occupied').textContent = String(cntOcc);
-    document.getElementById('tbl-cnt-reserved').textContent = String(cntRes);
-    document.getElementById('tbl-cnt-cleaning').textContent = String(cntClean);
+    const setTblCnt = (id, val) => {
+      const node = document.getElementById(id);
+      if (!node) return;
+      const str = String(val);
+      if (node.textContent !== str && node.textContent !== '' && node.textContent !== '0') {
+        triggerMicroClass(node, 'micro-pop', 260);
+      }
+      node.textContent = str;
+    };
+    setTblCnt('tbl-cnt-available', cntAvail);
+    setTblCnt('tbl-cnt-occupied', cntOcc);
+    setTblCnt('tbl-cnt-reserved', cntRes);
+    setTblCnt('tbl-cnt-cleaning', cntClean);
 
     grid.replaceChildren();
     if (!tablesReady && tablesList.length === 0) {

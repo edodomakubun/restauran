@@ -1,5 +1,5 @@
 // Modul halaman Pengaturan Izin Kasir (pengaturan.html - Admin)
-import { apiFetch, showToast } from '../app-client.js';
+import { apiFetch, flashButtonFeedback, showToast } from '../app-client.js';
 
 export function mount(ctx) {
   const { session, signal, subscribeStore } = ctx;
@@ -68,6 +68,7 @@ export function mount(ctx) {
     'submit',
     async (e) => {
       e.preventDefault();
+      const saveBtn = e.currentTarget.querySelector('button[type="submit"]');
       try {
         const updated = await apiFetch('/api/settings', {
           method: 'PUT',
@@ -79,6 +80,7 @@ export function mount(ctx) {
           }),
         });
         applyUI(updated.settings);
+        flashButtonFeedback(saveBtn, '<i class="bi bi-check2 me-1"></i>Tersimpan ✓', 1600);
         showToast('Pengaturan hak akses Kasir berhasil disimpan!', 'success');
       } catch (err) {
         showToast(err.message, 'danger');
