@@ -237,12 +237,12 @@ export function mount(ctx) {
     const tableWrap = document.getElementById('table-number-wrap');
     if (!dineBtn || !takeBtn || !tableWrap) return;
     if (serviceType === 'dine_in') {
-      dineBtn.className = 'btn btn-sm btn-primary service-type-btn';
-      takeBtn.className = 'btn btn-sm btn-outline-secondary service-type-btn';
+      dineBtn.className = 'btn btn-xs btn-primary service-type-btn';
+      takeBtn.className = 'btn btn-xs btn-outline-secondary service-type-btn';
       tableWrap.classList.remove('d-none');
     } else {
-      dineBtn.className = 'btn btn-sm btn-outline-secondary service-type-btn';
-      takeBtn.className = 'btn btn-sm btn-primary service-type-btn';
+      dineBtn.className = 'btn btn-xs btn-outline-secondary service-type-btn';
+      takeBtn.className = 'btn btn-xs btn-primary service-type-btn';
       tableWrap.classList.add('d-none');
       document.getElementById('order-table')?.classList.remove('is-invalid');
     }
@@ -363,7 +363,7 @@ export function mount(ctx) {
         'button',
         {
           type: 'button',
-          className: `btn btn-sm quick-note-toggle ${isOptsOpen ? 'btn-primary' : 'btn-outline-secondary'}`,
+          className: `btn btn-xs quick-note-toggle ${isOptsOpen ? 'btn-primary' : 'btn-outline-secondary'}`,
           'aria-expanded': String(isOptsOpen),
           title: 'Buka / ciutkan tombol opsi catatan menu',
         },
@@ -378,7 +378,7 @@ export function mount(ctx) {
         if (open) expandedNoteItems.add(item);
         else expandedNoteItems.delete(item);
         trayEl.classList.toggle('d-none', !open);
-        toggleBtn.className = `btn btn-sm quick-note-toggle ${open ? 'btn-primary' : 'btn-outline-secondary'}`;
+        toggleBtn.className = `btn btn-xs quick-note-toggle ${open ? 'btn-primary' : 'btn-outline-secondary'}`;
         toggleBtn.setAttribute('aria-expanded', String(open));
         toggleChevron.className = `bi ${open ? 'bi-chevron-up' : 'bi-chevron-down'} ms-1`;
       };
@@ -436,7 +436,7 @@ export function mount(ctx) {
         'button',
         {
           type: 'button',
-          className: `btn btn-sm ${item.qty > 1 ? 'btn-outline-primary' : 'btn-outline-secondary'}`,
+          className: `btn btn-xs ${item.qty > 1 ? 'btn-outline-primary' : 'btn-outline-secondary'}`,
           title:
             item.qty > 1
               ? 'Pisah 1 porsi ke baris baru agar bisa diberi catatan/level pedas berbeda'
@@ -582,7 +582,7 @@ export function mount(ctx) {
               'button',
               {
                 type: 'button',
-                className: 'btn btn-sm btn-outline-danger',
+                className: 'btn btn-xs btn-outline-danger',
                 ariaLabel: 'Hapus item',
                 onClick: () => {
                   cart.splice(idx, 1);
@@ -810,7 +810,7 @@ export function mount(ctx) {
         catFilter = btn.dataset.cat;
         menuPage = 1;
         for (const b of document.querySelectorAll('.cat-filter')) {
-          b.className = b.dataset.cat === catFilter ? 'btn btn-sm btn-primary cat-filter' : 'btn btn-sm btn-outline-primary cat-filter';
+          b.className = b.dataset.cat === catFilter ? 'btn btn-xs btn-primary cat-filter' : 'btn btn-xs btn-outline-primary cat-filter';
         }
         renderMenu();
       },
