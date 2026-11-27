@@ -1,468 +1,234 @@
 rules_version = '2';
 
-// =============================================================================
-// Assumed Data Model & Keyless RBAC Architecture
-// =============================================================================
-//
-// Architecture:
-//   - Keyless Production Mode: The Cloudflare Worker forwards the logged-in
-//     staff user's Firebase ID Token (`Bearer <idToken>`) to the Firestore REST
-//     API for validated mutations, and staff browsers subscribe directly via
-//     Firestore Web SDK `onSnapshot()` for real-time updates.
-//   - Therefore Firestore Security Rules enforce authentication, active staff
-//     status, role-based permissions, dynamic cashier settings, schema limits,
-//     and state transitions directly.
-//
-// Collection: users/{uid}
-//   Document ID: Firebase Auth UID
-//   Fields:
-//     - uid: string (optional on bootstrap docs, immutable if set, <= 128 chars)
-//     - email: string (required, valid email, immutable on update, <= 160 chars)
-//     - displayName: string (optional if `name` set, 1..120 chars)
-//     - name: string (optional legacy bootstrap field, 1..120 chars)
-//     - role: string (required, 'admin' | 'kasir' | 'chef')
-//     - isActive: bool (required)
-//     - createdAt: string (optional/immutable ISO date, <= 64 chars)
-//     - updatedAt: string (optional ISO date, <= 64 chars)
-//
-// Collection: settings/{docId} (specifically settings/restaurant)
-//   Fields:
-//     - restaurantName: string (optional, 1..120 chars)
-//     - kasirCanDeleteOrder: bool (required)
-//     - kasirCanEditWhileCooking: bool (required)
-//     - kasirCanCancelWhileCooking: bool (required)
-//     - kasirCanViewReport: bool (optional)
-//     - updatedAt: string (optional ISO date, <= 64 chars)
-//
-// Collection: menu_items/{itemId}
-//   Fields:
-//     - name: string (required, 1..120 chars)
-//     - category: string (required, 'makanan' | 'minuman')
-//     - price: number (required, 0..100000000)
-//     - isAvailable: bool (required)
-//     - description: string (optional, <= 500 chars)
-//     - createdAt: string (optional/immutable ISO date, <= 64 chars)
-//     - updatedAt: string (optional ISO date, <= 64 chars)
-//
-// Collection: orders/{orderId}
-//   Fields:
-//     - orderCode: string (required, immutable, 1..40 chars)
-//     - customerName: string (required, 1..100 chars)
-//     - serviceType: string (required, 'dine_in' | 'take_away')
-//     - tableNumber: string (optional/required when dine_in, <= 30 chars)
-//     - notes: string (optional, <= 400 chars)
-//     - status: string (required, 'pending' | 'cooking' | 'ready' | 'completed' | 'cancelled')
-//     - foodStatus: string (optional, 'none' | 'pending' | 'cooking' | 'ready' | 'completed' | 'cancelled')
-//     - drinkStatus: string (optional, 'none' | 'pending' | 'cooking' | 'ready' | 'completed' | 'cancelled')
-//     - cancelReason: string (optional, <= 300 chars)
-//     - isEdited: bool (optional)
-//     - totalAmount: number (required, 0..1000000000)
-//     - paymentStatus: string (optional, 'unpaid' | 'paid', <= 20 chars)
-//     - paymentMethod: string (optional, <= 30 chars)
-//     - discountAmount: number (optional, 0..1000000000)
-//     - paidAmount: number (optional, 0..1000000000)
-//     - changeAmount: number (optional, 0..1000000000)
-//     - paidAt: string (optional, <= 64 chars)
-//     - paidBy: string (optional, <= 120 chars)
-//     - items: list (required, 1..100 items)
-//     - createdBy: string (optional, <= 120 chars)
-//     - createdByUid: string (required, immutable, 1..128 chars)
-//     - updatedBy: string (optional, <= 120 chars)
-//     - createdAt: string (required, immutable, <= 64 chars)
-//     - updatedAt: string (required, <= 64 chars)
-//
-// Collection: tables/{tableId}
-//   Fields:
-//     - number: string (required, 1..20 chars)
-//     - area: string (required, 1..40 chars)
-//     - capacity: int/number (required, 1..50)
-//     - status: string (required, 'available' | 'reserved' | 'cleaning')
-//     - note: string (optional, <= 200 chars)
-//     - createdAt: string (optional, <= 64 chars)
-//     - updatedAt: string (optional, <= 64 chars)
-//     - updatedBy: string (optional, <= 120 chars)
-//
-// =============================================================================
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
     // =========================================================================
-    // Helper Functions
+    // Helper Functions (Ringkas & Hemat Ekspresi)
     // =========================================================================
 
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    function userDocPath() {
-      return /databases/$(database)/documents/users/$(request.auth.uid);
-    }
-
-    function settingsDocPath() {
-      return /databases/$(database)/documents/settings/restaurant;
+    function userExists() {
+      return isAuthenticated()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
     function isActiveStaff() {
-      return isAuthenticated()
-        && exists(userDocPath())
-        && get(userDocPath()).data.get('isActive', false) == true
-        && get(userDocPath()).data.get('role', '') in ['admin', 'kasir', 'chef'];
-    }
-
-    function currentRole() {
-      return get(userDocPath()).data.get('role', '');
+      return userExists()
+        && userDoc().get('isActive', false) == true
+        && userDoc().get('role', '') in ['admin', 'kasir', 'chef'];
     }
 
     function isActiveAdmin() {
-      return isActiveStaff() && currentRole() == 'admin';
+      return userExists()
+        && userDoc().get('isActive', false) == true
+        && userDoc().get('role', '') == 'admin';
     }
 
     function isActiveKasir() {
-      return isActiveStaff() && currentRole() == 'kasir';
+      return userExists()
+        && userDoc().get('isActive', false) == true
+        && userDoc().get('role', '') == 'kasir';
     }
 
     function isActiveChef() {
-      return isActiveStaff() && currentRole() == 'chef';
+      return userExists()
+        && userDoc().get('isActive', false) == true
+        && userDoc().get('role', '') == 'chef';
     }
 
     function kasirSetting(key, fallback) {
-      return exists(settingsDocPath())
-        ? get(settingsDocPath()).data.get(key, fallback)
-        : fallback;
-    }
-
-    function hasRequiredFields(fields) {
-      return request.resource.data.keys().hasAll(fields);
-    }
-
-    function hasOnlyAllowedFields(fields) {
-      return request.resource.data.keys().hasOnly(fields);
+      let path = /databases/$(database)/documents/settings/restaurant;
+      return exists(path) ? get(path).data.get(key, fallback) : fallback;
     }
 
     function areImmutableFieldsUnchanged(fields) {
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
     }
 
-    function isValidEmail(email) {
-      return email is string
-        && email.size() >= 3
-        && email.size() <= 160
-        && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    function isValidDate(val) {
+      return (val is string && val.size() >= 1 && val.size() <= 64) || val is timestamp;
     }
 
-    function isValidOptionalString(data, field, maxLen) {
+    function isOptionalDate(data, field) {
+      return !(field in data)
+        || (data[field] is string && data[field].size() <= 64)
+        || data[field] is timestamp;
+    }
+
+    function isOptionalStr(data, field, maxLen) {
       return !(field in data) || (data[field] is string && data[field].size() <= maxLen);
     }
 
-    function isValidNonEmptyString(data, field, maxLen) {
-      return (field in data)
-        && data[field] is string
-        && data[field].size() >= 1
-        && data[field].size() <= maxLen;
+    function isNonEmptyStr(data, field, maxLen) {
+      return (field in data) && data[field] is string && data[field].size() >= 1 && data[field].size() <= maxLen;
     }
 
-    function isValidOptionalNumber(data, field, minVal, maxVal) {
-      return !(field in data)
-        || (data[field] is number && data[field] >= minVal && data[field] <= maxVal);
+    function isOptionalNum(data, field, maxVal) {
+      return !(field in data) || (data[field] is number && data[field] >= 0 && data[field] <= maxVal);
     }
 
     // =========================================================================
-    // Domain Validators (Used in BOTH create and update)
+    // Domain Validators
     // =========================================================================
 
     function isValidUser(data) {
-      return hasOnlyAllowedFields([
-          'uid', 'email', 'displayName', 'name', 'role', 'isActive', 'createdAt', 'updatedAt'
-        ])
-        && hasRequiredFields(['email', 'role', 'isActive'])
-        && isValidEmail(data.email)
+      return data.keys().hasOnly(['uid', 'email', 'displayName', 'name', 'role', 'isActive', 'createdAt', 'updatedAt'])
+        && data.keys().hasAll(['email', 'role', 'isActive'])
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 160
         && data.role in ['admin', 'kasir', 'chef']
         && data.isActive is bool
-        && (isValidNonEmptyString(data, 'displayName', 120) || isValidNonEmptyString(data, 'name', 120))
-        && isValidOptionalString(data, 'uid', 128)
-        && isValidOptionalString(data, 'createdAt', 64)
-        && isValidOptionalString(data, 'updatedAt', 64);
+        && (isNonEmptyStr(data, 'displayName', 120) || isNonEmptyStr(data, 'name', 120))
+        && isOptionalStr(data, 'uid', 128)
+        && isOptionalDate(data, 'createdAt')
+        && isOptionalDate(data, 'updatedAt');
     }
 
     function isValidSettings(data) {
-      return hasOnlyAllowedFields([
-          'restaurantName',
-          'kasirCanDeleteOrder',
-          'kasirCanEditWhileCooking',
-          'kasirCanCancelWhileCooking',
-          'kasirCanViewReport',
-          'updatedAt'
+      return data.keys().hasOnly([
+          'restaurantName', 'kasirCanDeleteOrder', 'kasirCanEditWhileCooking',
+          'kasirCanCancelWhileCooking', 'kasirCanViewReport', 'updatedAt'
         ])
-        && hasRequiredFields([
-          'kasirCanDeleteOrder',
-          'kasirCanEditWhileCooking',
-          'kasirCanCancelWhileCooking'
-        ])
+        && data.keys().hasAll(['kasirCanDeleteOrder', 'kasirCanEditWhileCooking', 'kasirCanCancelWhileCooking'])
         && data.kasirCanDeleteOrder is bool
         && data.kasirCanEditWhileCooking is bool
         && data.kasirCanCancelWhileCooking is bool
         && (!('kasirCanViewReport' in data) || data.kasirCanViewReport is bool)
-        && isValidOptionalString(data, 'restaurantName', 120)
-        && isValidOptionalString(data, 'updatedAt', 64);
+        && isOptionalStr(data, 'restaurantName', 120)
+        && isOptionalDate(data, 'updatedAt');
     }
 
     function isValidMenuItem(data) {
-      return hasOnlyAllowedFields([
-          'name', 'category', 'price', 'isAvailable', 'description', 'createdAt', 'updatedAt'
-        ])
-        && hasRequiredFields(['name', 'category', 'price', 'isAvailable'])
-        && isValidNonEmptyString(data, 'name', 120)
+      return data.keys().hasOnly(['name', 'category', 'price', 'isAvailable', 'description', 'createdAt', 'updatedAt'])
+        && data.keys().hasAll(['name', 'category', 'price', 'isAvailable'])
+        && isNonEmptyStr(data, 'name', 120)
         && data.category in ['makanan', 'minuman']
-        && data.price is number
-        && data.price >= 0
-        && data.price <= 100000000
+        && data.price is number && data.price >= 0 && data.price <= 100000000
         && data.isAvailable is bool
-        && isValidOptionalString(data, 'description', 500)
-        && isValidOptionalString(data, 'createdAt', 64)
-        && isValidOptionalString(data, 'updatedAt', 64);
+        && isOptionalStr(data, 'description', 500)
+        && isOptionalDate(data, 'createdAt')
+        && isOptionalDate(data, 'updatedAt');
     }
 
     function isValidTable(data) {
-      return hasOnlyAllowedFields([
-          'number', 'area', 'capacity', 'status', 'note', 'createdAt', 'updatedAt', 'updatedBy'
-        ])
-        && hasRequiredFields(['number', 'area', 'capacity', 'status'])
-        && isValidNonEmptyString(data, 'number', 20)
-        && isValidNonEmptyString(data, 'area', 40)
-        && data.capacity is number
-        && data.capacity >= 1
-        && data.capacity <= 50
-        && data.status is string
+      return data.keys().hasOnly(['number', 'area', 'capacity', 'status', 'note', 'createdAt', 'updatedAt', 'updatedBy'])
+        && data.keys().hasAll(['number', 'area', 'capacity', 'status'])
+        && isNonEmptyStr(data, 'number', 20)
+        && isNonEmptyStr(data, 'area', 40)
+        && data.capacity is number && data.capacity >= 1 && data.capacity <= 50
         && data.status in ['available', 'reserved', 'cleaning']
-        && isValidOptionalString(data, 'note', 200)
-        && isValidOptionalString(data, 'createdAt', 64)
-        && isValidOptionalString(data, 'updatedAt', 64)
-        && isValidOptionalString(data, 'updatedBy', 120);
+        && isOptionalStr(data, 'note', 200)
+        && isOptionalDate(data, 'createdAt')
+        && isOptionalDate(data, 'updatedAt')
+        && isOptionalStr(data, 'updatedBy', 120);
     }
 
     function isValidOrder(data) {
-      return hasOnlyAllowedFields([
-          'orderCode',
-          'customerName',
-          'serviceType',
-          'tableNumber',
-          'notes',
-          'status',
-          'foodStatus',
-          'drinkStatus',
-          'cancelReason',
-          'isEdited',
-          'totalAmount',
-          'paymentStatus',
-          'paymentMethod',
-          'discountAmount',
-          'paidAmount',
-          'changeAmount',
-          'paidAt',
-          'paidBy',
-          'items',
-          'createdBy',
-          'createdByUid',
-          'updatedBy',
-          'createdAt',
-          'updatedAt'
+      return data.keys().hasOnly([
+          'orderCode', 'customerName', 'serviceType', 'tableNumber', 'notes',
+          'status', 'foodStatus', 'drinkStatus', 'cancelReason', 'isEdited',
+          'totalAmount', 'paymentStatus', 'paymentMethod', 'discountAmount',
+          'paidAmount', 'changeAmount', 'paidAt', 'paidBy', 'items',
+          'createdBy', 'createdByUid', 'updatedBy', 'createdAt', 'updatedAt'
         ])
-        && hasRequiredFields([
-          'orderCode',
-          'customerName',
-          'serviceType',
-          'status',
-          'totalAmount',
-          'items',
-          'createdByUid',
-          'createdAt',
-          'updatedAt'
+        && data.keys().hasAll([
+          'orderCode', 'customerName', 'serviceType', 'status',
+          'totalAmount', 'items', 'createdByUid', 'createdAt', 'updatedAt'
         ])
-        && isValidNonEmptyString(data, 'orderCode', 40)
-        && isValidNonEmptyString(data, 'customerName', 100)
+        && isNonEmptyStr(data, 'orderCode', 40)
+        && isNonEmptyStr(data, 'customerName', 100)
         && data.serviceType in ['dine_in', 'take_away']
-        && isValidOptionalString(data, 'tableNumber', 30)
-        && (data.serviceType != 'dine_in' || isValidNonEmptyString(data, 'tableNumber', 30))
-        && isValidOptionalString(data, 'notes', 400)
+        && (data.serviceType != 'dine_in' || isNonEmptyStr(data, 'tableNumber', 30))
+        && isOptionalStr(data, 'tableNumber', 30)
+        && isOptionalStr(data, 'notes', 400)
         && data.status in ['pending', 'cooking', 'ready', 'completed', 'cancelled']
         && (!('foodStatus' in data) || data.foodStatus in ['none', 'pending', 'cooking', 'ready', 'completed', 'cancelled'])
         && (!('drinkStatus' in data) || data.drinkStatus in ['none', 'pending', 'cooking', 'ready', 'completed', 'cancelled'])
-        && isValidOptionalString(data, 'cancelReason', 300)
+        && isOptionalStr(data, 'cancelReason', 300)
         && (!('isEdited' in data) || data.isEdited is bool)
-        && data.totalAmount is number
-        && data.totalAmount >= 0
-        && data.totalAmount <= 1000000000
-        && isValidOptionalString(data, 'paymentStatus', 20)
+        && data.totalAmount is number && data.totalAmount >= 0 && data.totalAmount <= 1000000000
         && (!('paymentStatus' in data) || data.paymentStatus in ['unpaid', 'paid'])
-        && isValidOptionalString(data, 'paymentMethod', 30)
-        && isValidOptionalNumber(data, 'discountAmount', 0, 1000000000)
-        && isValidOptionalNumber(data, 'paidAmount', 0, 1000000000)
-        && isValidOptionalNumber(data, 'changeAmount', 0, 1000000000)
-        && isValidOptionalString(data, 'paidAt', 64)
-        && isValidOptionalString(data, 'paidBy', 120)
-        && data.items is list
-        && data.items.size() >= 1
-        && data.items.size() <= 100
-        && isValidOptionalString(data, 'createdBy', 120)
-        && isValidNonEmptyString(data, 'createdByUid', 128)
-        && isValidOptionalString(data, 'updatedBy', 120)
-        && isValidNonEmptyString(data, 'createdAt', 64)
-        && isValidNonEmptyString(data, 'updatedAt', 64);
+        && isOptionalStr(data, 'paymentMethod', 30)
+        && isOptionalNum(data, 'discountAmount', 1000000000)
+        && isOptionalNum(data, 'paidAmount', 1000000000)
+        && isOptionalNum(data, 'changeAmount', 1000000000)
+        && isOptionalDate(data, 'paidAt')
+        && isOptionalStr(data, 'paidBy', 120)
+        && data.items is list && data.items.size() >= 1 && data.items.size() <= 100
+        && isOptionalStr(data, 'createdBy', 120)
+        && isNonEmptyStr(data, 'createdByUid', 128)
+        && isOptionalStr(data, 'updatedBy', 120)
+        && ('createdAt' in data) && isValidDate(data.createdAt)
+        && ('updatedAt' in data) && isValidDate(data.updatedAt);
     }
 
-    function isValidKitchenSectionTransition(prevVal, nextVal) {
+    function isValidSectionStep(prevVal, nextVal) {
       return nextVal == prevVal
-        || (prevVal == 'pending' && nextVal == 'cooking')
-        || (prevVal == 'cooking' && nextVal == 'ready')
+        || nextVal == 'none'
+        || (prevVal == 'none' && nextVal in ['pending', 'cooking', 'ready', 'completed'])
+        || (prevVal == 'pending' && nextVal in ['cooking', 'ready', 'completed'])
+        || (prevVal == 'cooking' && nextVal in ['ready', 'completed'])
         || (prevVal == 'ready' && nextVal == 'completed');
     }
 
-    function isValidKitchenSectionUpdate(field) {
-      let prevVal = resource.data.get(field, resource.data.status);
-      let nextVal = request.resource.data.get(field, prevVal);
-      return (!(field in resource.data) || (field in request.resource.data))
-        && (
-          isValidKitchenSectionTransition(prevVal, nextVal)
-          || (!(field in resource.data) && nextVal == 'none')
-        );
+    function isValidKitchenFields() {
+      let prevFood = resource.data.get('foodStatus', 'none');
+      let nextFood = request.resource.data.get('foodStatus', prevFood);
+      let prevDrink = resource.data.get('drinkStatus', 'none');
+      let nextDrink = request.resource.data.get('drinkStatus', prevDrink);
+      return (!('items' in request.resource.data.diff(resource.data).affectedKeys())
+          || (request.resource.data.items is list && request.resource.data.items.size() == resource.data.items.size()))
+        && isValidSectionStep(resource.data.status, request.resource.data.status)
+        && isValidSectionStep(prevFood, nextFood)
+        && isValidSectionStep(prevDrink, nextDrink);
     }
 
-    function isKitchenSectionAdvancing(field) {
-      let prevVal = resource.data.get(field, resource.data.status);
-      let nextVal = request.resource.data.get(field, prevVal);
-      return (field in request.resource.data)
-        && nextVal != prevVal
-        && isValidKitchenSectionTransition(prevVal, nextVal);
-    }
-
-    function isKitchenSectionCompletedFromReady(field) {
-      let prevVal = resource.data.get(field, resource.data.status);
-      let nextVal = request.resource.data.get(field, prevVal);
-      return prevVal == 'ready' && nextVal == 'completed';
-    }
-
-    function isValidKasirSectionCancel(field) {
-      return (!(field in resource.data) || (field in request.resource.data))
-        && (
-          !(field in request.resource.data)
-          || request.resource.data[field] == resource.data.get(field, 'none')
-          || request.resource.data[field] == 'cancelled'
-        );
-    }
-
-    function isValidKitchenItemsUpdate() {
-      return !('items' in request.resource.data.diff(resource.data).affectedKeys())
-        || (
-          request.resource.data.items is list
-          && resource.data.items is list
-          && request.resource.data.items.size() == resource.data.items.size()
-        );
+    function isValidChefOrderUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'items', 'status', 'foodStatus', 'drinkStatus', 'cancelReason', 'updatedBy', 'updatedAt'
+        ])
+        && resource.data.status in ['pending', 'cooking', 'ready']
+        && request.resource.data.status in ['pending', 'cooking', 'ready', 'completed']
+        && isValidKitchenFields();
     }
 
     function isValidKasirOrderUpdate() {
       let prev = resource.data.status;
       let next = request.resource.data.status;
       return (
-        // Kasir menandai pesanan siap atau bagian yang siap (makanan/minuman) menjadi selesai
+        // Update status dapur / selesai
         (request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'items', 'status', 'foodStatus', 'drinkStatus', 'cancelReason', 'updatedBy', 'updatedAt'
           ])
-          && isValidKitchenItemsUpdate()
           && next in ['cooking', 'ready', 'completed']
-          && isValidKitchenSectionTransition(prev, next)
-          && isValidKitchenSectionUpdate('foodStatus')
-          && isValidKitchenSectionUpdate('drinkStatus')
-          && (
-            (prev == 'ready' && next == 'completed')
-            || (
-              next == prev
-              && prev in ['cooking', 'ready']
-              && (
-                isKitchenSectionCompletedFromReady('foodStatus')
-                || isKitchenSectionCompletedFromReady('drinkStatus')
-              )
-            )
-          ))
+          && isValidKitchenFields())
         ||
-        // Kasir membatalkan pesanan (hanya saat pending, atau cooking bila diizinkan Admin)
-        (next == 'cancelled' && (
-          prev == 'pending' ||
-          (prev == 'cooking' && kasirSetting('kasirCanCancelWhileCooking', false) == true)
-        )
+        // Pembatalan pesanan oleh kasir
+        (next == 'cancelled'
+          && (prev == 'pending' || (prev == 'cooking' && kasirSetting('kasirCanCancelWhileCooking', false) == true))
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'items', 'status', 'foodStatus', 'drinkStatus', 'cancelReason', 'updatedBy', 'updatedAt'
-          ])
-          && isValidKitchenItemsUpdate()
-          && isValidKasirSectionCancel('foodStatus')
-          && isValidKasirSectionCancel('drinkStatus'))
+          ]))
         ||
-        // Kasir mengedit detail pesanan (hanya saat pending, atau cooking bila diizinkan Admin)
-        (next == prev && (
-          prev == 'pending' ||
-          (prev == 'cooking' && kasirSetting('kasirCanEditWhileCooking', false) == true)
-        ))
+        // Edit pesanan oleh kasir
+        (next == prev
+          && (prev == 'pending' || (prev == 'cooking' && kasirSetting('kasirCanEditWhileCooking', false) == true)))
         ||
-        // Kasir memproses pembayaran pada pesanan yang tidak dibatalkan (dan opsional menandai ready -> completed)
+        // Pembayaran oleh kasir
         (prev != 'cancelled'
-          && (
-            (next == prev
-              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                'paymentStatus',
-                'paymentMethod',
-                'discountAmount',
-                'paidAmount',
-                'changeAmount',
-                'paidAt',
-                'paidBy',
-                'status',
-                'updatedBy',
-                'updatedAt'
-              ]))
-            || (prev == 'ready'
-              && next == 'completed'
-              && isValidKitchenItemsUpdate()
-              && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-                'paymentStatus',
-                'paymentMethod',
-                'discountAmount',
-                'paidAmount',
-                'changeAmount',
-                'paidAt',
-                'paidBy',
-                'status',
-                'foodStatus',
-                'drinkStatus',
-                'items',
-                'updatedBy',
-                'updatedAt'
-              ]))
-          ))
+          && (next == prev || (prev == 'ready' && next == 'completed'))
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'paymentStatus', 'paymentMethod', 'discountAmount', 'paidAmount', 'changeAmount',
+            'paidAt', 'paidBy', 'status', 'foodStatus', 'drinkStatus', 'items', 'updatedBy', 'updatedAt'
+          ]))
       );
-    }
-
-    function isValidChefOrderUpdate() {
-      let prev = resource.data.status;
-      let next = request.resource.data.status;
-      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'items', 'status', 'foodStatus', 'drinkStatus', 'cancelReason', 'updatedBy', 'updatedAt'
-        ])
-        && isValidKitchenItemsUpdate()
-        && prev in ['pending', 'cooking', 'ready']
-        && next in ['cooking', 'ready', 'completed']
-        && isValidKitchenSectionTransition(prev, next)
-        && isValidKitchenSectionUpdate('foodStatus')
-        && isValidKitchenSectionUpdate('drinkStatus')
-        && (
-          next != prev
-          || isKitchenSectionAdvancing('foodStatus')
-          || isKitchenSectionAdvancing('drinkStatus')
-          || (request.resource.data.items != resource.data.items)
-        );
     }
 
     // =========================================================================
@@ -470,7 +236,7 @@ service cloud.firestore {
     // =========================================================================
 
     match /users/{uid} {
-      allow get: if isOwner(uid) || isActiveAdmin();
+      allow get: if (isAuthenticated() && request.auth.uid == uid) || isActiveAdmin();
       allow list: if isActiveAdmin();
       allow create: if isActiveAdmin() && isValidUser(request.resource.data);
       allow update: if isActiveAdmin()
@@ -500,8 +266,8 @@ service cloud.firestore {
       allow delete: if isActiveAdmin();
       allow update: if isValidTable(request.resource.data)
         && (
-          isActiveAdmin() ||
-          (isActiveKasir() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'note', 'updatedBy', 'updatedAt']))
+          isActiveAdmin()
+          || (isActiveKasir() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'note', 'updatedBy', 'updatedAt']))
         );
     }
 
@@ -511,13 +277,13 @@ service cloud.firestore {
         && isValidOrder(request.resource.data)
         && request.resource.data.status == 'pending'
         && request.resource.data.createdByUid == request.auth.uid;
-      allow update: if isValidOrder(request.resource.data)
-        && areImmutableFieldsUnchanged(['orderCode', 'createdBy', 'createdByUid', 'createdAt'])
+      allow update: if areImmutableFieldsUnchanged(['orderCode', 'createdBy', 'createdByUid', 'createdAt'])
         && (
-          isActiveAdmin() ||
-          (isActiveKasir() && isValidKasirOrderUpdate()) ||
-          (isActiveChef() && isValidChefOrderUpdate())
-        );
+          isActiveAdmin()
+          || (isActiveChef() && isValidChefOrderUpdate())
+          || (isActiveKasir() && isValidKasirOrderUpdate())
+        )
+        && isValidOrder(request.resource.data);
       allow delete: if isActiveAdmin()
         || (isActiveKasir() && kasirSetting('kasirCanDeleteOrder', false) == true);
     }
