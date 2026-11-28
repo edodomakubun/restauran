@@ -160,19 +160,19 @@
                       <div class="col-md-3">
                         <div class="border rounded p-2 h-100 bg-body-tertiary">
                           <div class="fw-bold text-primary small mb-1">1. Kasir Buat Pesanan</div>
-                          <div class="small text-secondary">Pilih menu, atur porsi/catatan pedas atau gula, pilih Meja atau Dibungkus, lalu kirim ke dapur.</div>
+                          <div class="small text-secondary">Pilih menu, atur catatan opsi cepat, pilih Meja (<code>DI-...</code>) atau Dibungkus (<code>TA-...</code>), lalu kirim ke dapur.</div>
                         </div>
                       </div>
                       <div class="col-md-3">
                         <div class="border rounded p-2 h-100 bg-body-tertiary">
                           <div class="fw-bold text-warning small mb-1">2. Chef Mulai Masak</div>
-                          <div class="small text-secondary">Pesanan langsung masuk ke Layar Chef. Klik <strong>Mulai Masak</strong>, lalu selesaikan tiap menu satu per satu.</div>
+                          <div class="small text-secondary">Klik kartu order di Layar Chef untuk membuka detail, klik <strong>Mulai Masak</strong>, lalu selesaikan per menu atau semua menu sekaligus.</div>
                         </div>
                       </div>
                       <div class="col-md-3">
                         <div class="border rounded p-2 h-100 bg-body-tertiary">
-                          <div class="fw-bold text-success small mb-1">3. Siap &amp; Disajikan</div>
-                          <div class="small text-secondary">Jika makanan atau minuman sudah siap, Kasir melihat notifikasi dan bisa menandai <strong>Selesai</strong> di Daftar Pesanan.</div>
+                          <div class="fw-bold text-success small mb-1">3. Pantau &amp; Sajikan</div>
+                          <div class="small text-secondary">Pantau timer durasi masak di Daftar Pesanan atau klik nomor order di Dasbor untuk langsung membuka detail kartunya.</div>
                         </div>
                       </div>
                       <div class="col-md-3">
@@ -195,18 +195,20 @@
                       <div class="border rounded p-2">
                         <div class="fw-semibold mb-1"><i class="bi bi-1-circle text-primary me-1"></i> Membuat Pesanan Baru (<code>Buat Pesanan</code>)</div>
                         <ul class="mb-0 ps-3">
-                          <li>Klik kartu menu untuk menambahkannya ke kolom <strong>Menu Dipilih</strong> (gunakan filter kategori atau kotak pencarian).</li>
-                          <li>Jika pembeli memesan menu sama dengan catatan berbeda (mis. 1 <em>Tidak Pedas</em>, 1 <em>Pedas</em>), klik tombol <strong>Pisah</strong> (jika qty &gt; 1) atau <strong>+ Varian</strong> (jika qty = 1), lalu pilih chip catatan cepat lewat tombol <strong>Opsi</strong>.</li>
+                          <li>Klik kartu menu untuk menambahkannya ke kartu <strong>Menu Dipilih</strong> (gunakan filter kategori atau kotak pencarian). Gunakan tombol <strong>Sebelumnya / Berikutnya / Kirim</strong> di bagian atas wizard.</li>
+                          <li>Item di keranjang otomatis tampil ringkas. <strong>Klik area item</strong> untuk membuka catatan/tombol <strong>+ Varian</strong> atau <strong>Pisah</strong>, lalu klik <strong>Opsi</strong> (panel chip cepat mengambang di atas daftar tanpa menggeser item lain).</li>
+                          <li>Gunakan ikon <strong>Maksimalkan</strong> pada pojok kanan atas kartu <strong>Menu Dipilih</strong> untuk memperluas keranjang menjadi tampilan kotak-kotak layar penuh, atau ikon <strong>−</strong> untuk menciutkan.</li>
                           <li>Jika ada pesanan di luar daftar menu, buka panel <strong>Tulis Menu Manual / Kustom</strong>.</li>
-                          <li>Klik <strong>Berikutnya</strong> untuk mengisi Nama Pembeli, tipe layanan (<em>Makan di Tempat + No. Meja</em> atau <em>Dibungkus</em>), dan catatan dapur umum, lalu <strong>Kirim Pesanan ke Dapur</strong>.</li>
+                          <li>Nomor pesanan otomatis dibuat terpisah: <code>DI-YYYYMMDD-0001</code> untuk <em>Makan di Tempat</em> dan <code>TA-YYYYMMDD-0001</code> untuk <em>Dibungkus (Take Away)</em>.</li>
                         </ul>
                       </div>
                       <div class="border rounded p-2">
                         <div class="fw-semibold mb-1"><i class="bi bi-2-circle text-primary me-1"></i> Mengelola Daftar Pesanan (<code>Daftar Pesanan</code>)</div>
                         <ul class="mb-0 ps-3">
-                          <li>Gunakan tombol status di bagian atas (<strong>Semua</strong>, <strong>Menunggu</strong>, <strong>Dimasak</strong>, <strong>Siap Disajikan</strong>, <strong>Selesai</strong>, <strong>Dibatalkan</strong>) untuk memantau tiap tahap.</li>
-                          <li>Klik <strong>Mkn Selesai</strong> / <strong>Mnm Selesai</strong> / <strong>Selesai</strong> setelah pesanan diantar atau diambil pembeli.</li>
-                          <li>Tombol <strong>Edit</strong> dan <strong>Batal</strong> tersedia sesuai izin yang diberikan Admin.</li>
+                          <li>Pesanan tampil dalam bentuk <strong>kotak-kotak</strong> berisi nomor urut (<code>#1</code>, <code>#2</code>, dst.), kode pesanan, nomor meja &amp; nama pembeli, status dapur, status bayar, serta <strong>timer durasi masak berjalan</strong> saat status <em>Dimasak</em>.</li>
+                          <li><strong>Klik kotak order</strong> untuk memperluas detail langsung di tempat (dengan <em>auto-scroll</em> halus) guna melihat waktu pesan lengkap (<em>Pagi/Siang/Sore/Malam</em>), daftar menu, catatan, dan tombol aksi. Klik ulang kartu atau area di luar kartu untuk mengecilkannya kembali.</li>
+                          <li>Gunakan filter <strong>Status</strong> (Semua, Menunggu, Dimasak, Siap Disajikan, Selesai, Dibatalkan) dan filter <strong>Periode</strong> (Semua, Hari Ini, Minggu Ini, <strong>Bulan</strong> Januari–Desember, serta <strong>Kalender</strong> rentang tanggal).</li>
+                          <li>Dari halaman <strong>Dasbor</strong>, mengklik nomor order pada tabel <em>Pesanan Terbaru</em> akan langsung membuka Daftar Pesanan dan memperluas kartu order terkait secara otomatis.</li>
                         </ul>
                       </div>
                       <div class="border rounded p-2">
@@ -234,10 +236,10 @@
                       <div class="border rounded p-2">
                         <div class="fw-semibold mb-1"><i class="bi bi-fire text-warning me-1"></i> Memproses Tiket Pesanan (<code>Layar Chef</code>)</div>
                         <ul class="mb-0 ps-3">
-                          <li>Pesanan baru dari Kasir akan muncul dengan status <strong>Menunggu</strong>.</li>
-                          <li>Klik <strong>Mulai Masak</strong> pada tiket pesanan saat dapur mulai memproses pesanan tersebut.</li>
-                          <li>Setelah <em>Mulai Masak</em> diklik, setiap item menu menampilkan tombol <strong>Selesai Dimasak</strong> (makanan) atau <strong>Selesai Dibuat</strong> (minuman) secara terpisah.</li>
-                          <li>Jika satu pesanan memiliki banyak menu, klik <strong>Detail Pesanan</strong> untuk melihat seluruh daftar item tanpa membuat kartu terlalu panjang.</li>
+                          <li>Setiap pesanan di Layar Chef tampil sebagai <strong>kotak ringkas</strong> berisi nomor urut, kode pesanan (<code>DI-...</code> / <code>TA-...</code>), nomor meja &amp; nama pembeli, serta status.</li>
+                          <li><strong>Klik kotak pesanan</strong> untuk memperluas detail di tempat (halaman otomatis tergulir agar seluruh menu terlihat utuh). Klik area kartu lagi atau klik di luar kartu untuk mengecilkannya kembali.</li>
+                          <li>Klik <strong>Mulai Masak</strong> saat dapur mulai memproses pesanan tersebut.</li>
+                          <li>Setelah <em>Mulai Masak</em> diklik, Chef dapat menandai selesai per item (<strong>Selesai Dimasak</strong> / <strong>Selesai Dibuat</strong>), atau langsung klik tombol <strong>Selesai Dimasak / Dibuat</strong> di bagian bawah kartu untuk menyelesaikan seluruh item pesanan sekaligus.</li>
                           <li>Gunakan filter <strong>Semua Bagian / Fokus Makanan / Fokus Minuman</strong> di bar atas untuk memfokuskan layar pada bagian dapur tertentu.</li>
                         </ul>
                       </div>
