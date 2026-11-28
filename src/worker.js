@@ -76,6 +76,67 @@ function errorResponse(message, status = 400, code = 'BAD_REQUEST') {
   return jsonResponse({ error: message, code }, status);
 }
 
+function toFriendlyServerError(err) {
+  const raw = String(err?.message || '').trim();
+  const lower = raw.toLowerCase();
+
+  if (lower.includes('firestore rest error 403') || lower.includes('permission_denied') || lower.includes('insufficient permissions')) {
+    return {
+      status: 403,
+      code: 'PERMISSION_DENIED',
+      message: 'Akses ke database ditolak. Periksa hak akses akun Anda atau aturan keamanan Firestore.',
+    };
+  }
+  if (lower.includes('firestore rest error 401') || lower.includes('unauthenticated')) {
+    return {
+      status: 401,
+      code: 'UNAUTHORIZED',
+      message: 'Sesi login Anda telah berakhir atau tidak valid. Silakan masuk kembali.',
+    };
+  }
+  if (lower.includes('firestore rest error 404') || lower.includes('not_found')) {
+    return {
+      status: 404,
+      code: 'NOT_FOUND',
+      message: 'Data yang diminta tidak ditemukan di database.',
+    };
+  }
+  if (lower.includes('firestore rest error 409') || lower.includes('already_exists')) {
+    return {
+      status: 409,
+      code: 'CONFLICT',
+      message: 'Data sudah ada atau baru saja diubah pengguna lain. Muat ulang halaman lalu coba lagi.',
+    };
+  }
+  if (lower.includes('firestore rest error 429') || lower.includes('resource_exhausted') || lower.includes('quota')) {
+    return {
+      status: 429,
+      code: 'QUOTA_EXCEEDED',
+      message: 'Batas permintaan database tercapai sementara. Tunggu beberapa saat lalu coba lagi.',
+    };
+  }
+  if (
+    lower.includes('firestore rest error 5') ||
+    lower.includes('unavailable') ||
+    lower.includes('deadline_exceeded') ||
+    lower.includes('network')
+  ) {
+    return {
+      status: 503,
+      code: 'SERVICE_UNAVAILABLE',
+      message: 'Koneksi ke server database sedang terganggu. Periksa jaringan internet lalu coba lagi.',
+    };
+  }
+  if (!raw || raw.includes('{') || lower.includes('firestore rest error')) {
+    return {
+      status: 500,
+      code: 'INTERNAL_ERROR',
+      message: 'Terjadi gangguan pada server saat memproses data. Silakan coba lagi beberapa saat lagi.',
+    };
+  }
+  return { status: 500, code: 'INTERNAL_ERROR', message: raw };
+}
+
 async function readJson(request) {
   try {
     const body = await request.json();
@@ -138,12 +199,29 @@ function sanitizeOrderItems(items) {
   return { items: cleaned, totalAmount };
 }
 
-function formatOrderCode(seq) {
+function getOrderCodePrefix(serviceType) {
+  const prefix = serviceType === 'take_away' ? 'TA' : 'DI';
   const d = new Date();
   const y = d.getUTCFullYear();
   const m = String(d.getUTCMonth() + 1).padStart(2, '0');
   const day = String(d.getUTCDate()).padStart(2, '0');
-  return `ORD-${y}${m}${day}-${String(seq).padStart(3, '0')}`;
+  return `${prefix}-${y}${m}${day}-`;
+}
+
+function formatOrderCode(seq, serviceType) {
+  return `${getOrderCodePrefix(serviceType)}${String(seq).padStart(4, '0')}`;
+}
+
+function computeNextOrderCode(orders, serviceType) {
+  const todayPrefix = getOrderCodePrefix(serviceType);
+  let maxSeq = 0;
+  for (const o of orders) {
+    if (typeof o.orderCode === 'string' && o.orderCode.startsWith(todayPrefix)) {
+      const n = Number.parseInt(o.orderCode.slice(todayPrefix.length), 10);
+      if (Number.isFinite(n) && n > maxSeq) maxSeq = n;
+    }
+  }
+  return formatOrderCode(maxSeq + 1, serviceType);
 }
 
 function createFirestoreAdapter(env, fetchImpl, userBearerToken = null) {
@@ -293,16 +371,8 @@ function createFirestoreAdapter(env, fetchImpl, userBearerToken = null) {
     },
 
     async createOrder(order) {
-      const existing = await fb.listRecentOrders(40);
-      const todayPrefix = formatOrderCode(0).slice(0, 13);
-      let maxSeq = 0;
-      for (const o of existing) {
-        if (typeof o.orderCode === 'string' && o.orderCode.startsWith(todayPrefix)) {
-          const n = Number.parseInt(o.orderCode.slice(todayPrefix.length), 10);
-          if (Number.isFinite(n) && n > maxSeq) maxSeq = n;
-        }
-      }
-      const code = formatOrderCode(maxSeq + 1);
+      const existing = await fb.listRecentOrders(80);
+      const code = computeNextOrderCode(existing, order.serviceType);
       return fb.createDocument('orders', { ...order, orderCode: code });
     },
 
@@ -401,7 +471,7 @@ function createLocalAdapter(store) {
     listOrders: async () => store.listOrders(),
     getOrder: async (id) => store.getOrder(id),
     createOrder: async (order) => {
-      const code = formatOrderCode(store.nextSequence());
+      const code = computeNextOrderCode(store.listOrders(), order.serviceType);
       return store.createOrder({ ...order, orderCode: code });
     },
     updateOrder: async (id, patch) => store.updateOrder(id, patch),
@@ -1031,17 +1101,22 @@ export function createWorkerHandler(options = {}) {
             ? 'cancelled'
             : computeOverallOrderStatus(derived.foodStatus, derived.drinkStatus, nextStatus);
 
+        const nowIso = new Date().toISOString();
         const updated = await adapter.updateOrder(orderId, {
           items: nextItems,
           status: overallStatus,
           foodStatus: nextStatus === 'cancelled' && derived.hasFood ? 'cancelled' : derived.foodStatus,
           drinkStatus: nextStatus === 'cancelled' && derived.hasDrink ? 'cancelled' : derived.drinkStatus,
+          cookingStartedAt:
+            existing.cookingStartedAt || (overallStatus === 'cooking' ? nowIso : null),
+          readyAt:
+            overallStatus === 'ready' ? existing.readyAt || nowIso : overallStatus === 'cooking' ? null : existing.readyAt || null,
           cancelReason:
             nextStatus === 'cancelled'
               ? String(body.cancelReason || 'Dibatalkan oleh kasir').trim().slice(0, 250)
               : existing.cancelReason || '',
           updatedBy: currentUser.displayName || currentUser.email,
-          updatedAt: new Date().toISOString(),
+          updatedAt: nowIso,
         });
         return jsonResponse({ order: updated, revision: await adapter.getRevision() });
       }
@@ -1173,7 +1248,9 @@ export function createWorkerHandler(options = {}) {
 
       return errorResponse('Endpoint API tidak ditemukan.', 404, 'NOT_FOUND');
     } catch (err) {
-      return errorResponse(err.message || 'Terjadi kesalahan internal pada server.', 500, 'INTERNAL_ERROR');
+      console.error('[RestoOrder API Error]', err);
+      const friendly = toFriendlyServerError(err);
+      return errorResponse(friendly.message, friendly.status, friendly.code);
     }
   };
 }

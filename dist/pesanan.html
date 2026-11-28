@@ -148,7 +148,7 @@
           <div class="container-fluid">
             <!-- Wizard Pemesanan Compact -->
             <div class="row">
-              <div class="col-12 col-xxl-11 mb-2">
+              <div class="col-12 mb-2">
                 <div id="order-wizard-card" class="card card-outline card-primary wizard-compact">
                   <div class="card-header py-2 px-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <h3 id="cart-title" class="card-title mb-0">
@@ -184,10 +184,25 @@
                       <li data-step="2">Tinjau &amp; Kirim</li>
                     </ol>
 
+                    <!-- Navigasi Atas Wizard -->
+                    <div class="d-flex flex-wrap justify-content-between align-items-center pb-2 mb-2 border-bottom gap-2">
+                      <button type="button" class="btn btn-sm btn-outline-secondary" id="wz-prev" disabled>
+                        <i class="bi bi-arrow-left me-1"></i> Sebelumnya
+                      </button>
+                      <div class="d-flex flex-wrap align-items-center gap-2 ms-auto">
+                        <button type="button" class="btn btn-sm btn-primary" id="wz-next">
+                          Berikutnya <i class="bi bi-arrow-right ms-1"></i>
+                        </button>
+                        <button id="btn-submit-order" type="button" class="btn btn-sm btn-success d-none">
+                          <i class="bi bi-send-check me-1"></i> Kirim Pesanan ke Dapur
+                        </button>
+                      </div>
+                    </div>
+
                     <!-- Langkah 1: Pilih Menu Langsung + Form Manual Collapsible + Keranjang (datar tanpa kotak/card bertingkat) -->
                     <fieldset class="wizard-step" data-step="0">
                       <div class="row g-3">
-                        <div class="col-lg-8">
+                        <div class="col-lg-7">
                           <div class="d-flex flex-column flex-sm-row gap-1 justify-content-between align-items-stretch align-items-sm-center pb-1 mb-2 border-bottom">
                             <div class="d-flex flex-wrap gap-1" role="group" aria-label="Filter kategori menu">
                               <button type="button" class="btn btn-xs btn-primary cat-filter" data-cat="all">Semua</button>
@@ -259,22 +274,48 @@
                           </div>
                         </div>
 
-                        <div class="col-lg-4 border-top pt-2 pt-lg-0 border-top-lg-0">
-                          <div class="h-100 d-flex flex-column ps-lg-2">
-                            <div class="d-flex justify-content-between align-items-center pb-1 mb-1 border-bottom">
-                              <span class="fw-semibold small"><i class="bi bi-basket2 me-1 text-primary"></i>Menu Dipilih</span>
-                              <button id="btn-clear-cart" type="button" class="btn btn-link btn-sm text-danger p-0 text-decoration-none">
-                                Kosongkan
-                              </button>
+                        <div class="col-lg-5">
+                          <div id="cart-widget-card" class="card card-outline card-primary h-100 mb-0">
+                            <div class="card-header d-flex align-items-center py-2 px-2">
+                              <h3 class="card-title mb-0 fs-6 fw-semibold">
+                                <i class="bi bi-basket2 me-1 text-primary"></i>Menu Dipilih
+                              </h3>
+                              <div class="card-tools ms-auto d-flex align-items-center gap-1">
+                                <button id="btn-clear-cart" type="button" class="btn btn-link btn-xs text-danger p-0 text-decoration-none me-1">
+                                  Kosongkan
+                                </button>
+                                <button
+                                  type="button"
+                                  class="btn btn-tool"
+                                  data-lte-toggle="card-collapse"
+                                  aria-label="Ciutkan atau perluas keranjang menu"
+                                  title="Ciutkan / Buka keranjang"
+                                >
+                                  <i data-lte-icon="expand" class="bi bi-plus-lg"></i>
+                                  <i data-lte-icon="collapse" class="bi bi-dash-lg"></i>
+                                </button>
+                                <button
+                                  type="button"
+                                  class="btn btn-tool"
+                                  data-lte-toggle="card-maximize"
+                                  aria-label="Maksimalkan keranjang menu"
+                                  title="Maksimalkan / Kembalikan keranjang"
+                                >
+                                  <i data-lte-icon="maximize" class="bi bi-fullscreen"></i>
+                                  <i data-lte-icon="minimize" class="bi bi-fullscreen-exit"></i>
+                                </button>
+                              </div>
                             </div>
-                            <div class="flex-grow-1 cart-scroll-area">
-                              <div id="cart-items" class="list-group">
-                                <div class="list-group-item text-center text-secondary small py-2">
-                                  Belum ada menu dipilih. Klik menu atau buka "Tulis Menu Manual".
+                            <div class="card-body p-2 d-flex flex-column">
+                              <div class="flex-grow-1 cart-scroll-area">
+                                <div id="cart-items" class="list-group">
+                                  <div class="list-group-item text-center text-secondary small py-2">
+                                    Belum ada menu dipilih. Klik menu atau buka "Tulis Menu Manual".
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                            <div class="d-flex justify-content-between align-items-center pt-1 mt-2 border-top">
+                            <div class="card-footer py-2 px-2 d-flex justify-content-between align-items-center bg-body-tertiary">
                               <span class="fw-semibold small">Total Estimasi</span>
                               <span id="cart-total" class="fs-6 fw-bold text-primary">Rp 0</span>
                             </div>
@@ -324,21 +365,6 @@
                       <h4 class="h6 fw-bold mb-2"><i class="bi bi-clipboard-check me-1 text-success"></i> Tinjau &amp; Konfirmasi Pesanan</h4>
                       <dl class="row mb-0 border rounded p-2 bg-body-tertiary small" id="wz-summary"></dl>
                     </fieldset>
-
-                    <!-- Navigasi Bawah Wizard -->
-                    <div class="d-flex flex-wrap justify-content-between align-items-center mt-2 pt-2 border-top gap-2">
-                      <button type="button" class="btn btn-sm btn-outline-secondary" id="wz-prev" disabled>
-                        <i class="bi bi-arrow-left me-1"></i> Sebelumnya
-                      </button>
-                      <div class="d-flex flex-wrap align-items-center gap-2 ms-auto">
-                        <button type="button" class="btn btn-sm btn-primary" id="wz-next">
-                          Berikutnya <i class="bi bi-arrow-right ms-1"></i>
-                        </button>
-                        <button id="btn-submit-order" type="button" class="btn btn-sm btn-success d-none">
-                          <i class="bi bi-send-check me-1"></i> Kirim Pesanan ke Dapur
-                        </button>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>

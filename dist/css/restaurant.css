@@ -427,20 +427,69 @@ body {
 }
 
 .cart-qty-box {
-  min-width: 88px;
+  min-width: 68px;
+}
+
+.cart-qty-box .btn,
+.cart-qty-box .input-group-text {
+  padding: 0.08rem 0.28rem;
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.cart-action-btn {
+  padding: 0.08rem 0.34rem;
+  font-size: 0.68rem;
+  line-height: 1.2;
+}
+
+.cart-item-compact .badge {
+  font-size: 0.65rem;
+  padding: 0.14em 0.4em;
+}
+
+.cart-note-group .form-control {
+  min-height: 24px;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.74rem;
+}
+
+.cart-note-group .quick-note-toggle {
+  padding: 0.1rem 0.38rem;
+  font-size: 0.68rem;
+  line-height: 1.15;
 }
 
 /* Tiket Layar Chef (Kitchen Display System - compact) */
+.chef-tickets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+  gap: 0.7rem;
+  align-items: start;
+}
+
+.chef-ticket-wrap.is-expanded {
+  grid-column: 1 / -1;
+  width: 100%;
+  max-width: 560px;
+}
+
+@media (min-width: 576px) {
+  .chef-ticket-wrap.is-expanded {
+    grid-column: span 2;
+  }
+}
+
 .chef-ticket {
   border-top-width: 4px !important;
   transition: box-shadow 0.2s ease, transform 0.15s ease;
   height: auto;
+  cursor: pointer;
 }
 
-@media (min-width: 768px) {
-  .chef-ticket {
-    height: 100%;
-  }
+.chef-ticket.is-expanded {
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.13) !important;
+  animation: orderCardExpand 0.24s var(--ui-ease-out);
 }
 
 .chef-ticket-actions {
@@ -896,7 +945,8 @@ body {
 }
 
 .cart-scroll-area {
-  max-height: 280px;
+  min-height: 260px;
+  max-height: 380px;
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
@@ -904,8 +954,92 @@ body {
 
 @media (min-width: 992px) {
   .cart-scroll-area {
-    max-height: 330px;
+    min-height: 420px;
+    max-height: max(420px, calc(100vh - 260px));
   }
+}
+
+.maximized-card .cart-scroll-area {
+  max-height: none;
+}
+
+/* Perbaiki nested .card.maximized-card di dalam .card lain agar ikon minimize tetap tampil */
+.card.maximized-card > .card-header [data-lte-icon="minimize"] {
+  display: inline-block;
+}
+
+/* Animasi & Tata Letak Kotak-Kotak pada Card Keranjang saat Maximize / Minimize */
+@keyframes cartCardMaximizeIn {
+  from {
+    opacity: 0.75;
+    transform: scale(0.965);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes cartCardMinimizeIn {
+  from {
+    opacity: 0.75;
+    transform: scale(1.03);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes cartGridItemIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+#cart-widget-card.maximized-card {
+  animation: cartCardMaximizeIn 0.24s var(--ui-ease-out);
+}
+
+#cart-widget-card.cart-card-minimizing {
+  animation: cartCardMinimizeIn 0.24s var(--ui-ease-out);
+}
+
+#cart-widget-card.maximized-card #cart-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.65rem;
+  align-items: start;
+  padding: 0.25rem;
+}
+
+#cart-widget-card.maximized-card #cart-items > .list-group-item {
+  border: 1px solid var(--bs-border-color);
+  border-radius: 0.55rem !important;
+  padding: 0.6rem 0.75rem !important;
+  background-color: var(--bs-body-bg);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0.35rem;
+  margin-top: 0;
+  animation: cartGridItemIn 0.24s var(--ui-ease-out) both;
+  transition: border-color var(--ui-dur-fast) ease, box-shadow var(--ui-dur-fast) ease, transform var(--ui-dur-fast) var(--ui-ease-out);
+}
+
+#cart-widget-card.maximized-card #cart-items > .list-group-item:hover {
+  border-color: rgba(var(--bs-primary-rgb), 0.45);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+#cart-widget-card.maximized-card #cart-items > .list-group-item.text-center {
+  grid-column: 1 / -1;
 }
 
 /* Grafik batang ringkas Laporan Penjualan */
@@ -1156,27 +1290,51 @@ body {
   }
 }
 
-/* Panel tombol catatan cepat per menu (bisa diciutkan) */
+/* Panel tombol catatan cepat per menu (mengambang di atas item lain agar tidak menggeser layout) */
+.cart-item-compact {
+  position: relative;
+  cursor: pointer;
+}
+
+.cart-item-compact .quick-note-tray {
+  cursor: default;
+}
+
+.cart-item-compact:has(.quick-note-tray:not(.d-none)) {
+  z-index: 25;
+}
+
+.quick-note-tray {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  padding: 0.35rem 0.45rem !important;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.16);
+  animation: wizardFadeSlide var(--ui-dur-fast) var(--ui-ease-out);
+}
+
 .quick-note-toggle {
-  font-size: 0.74rem;
+  font-size: 0.68rem;
   white-space: nowrap;
 }
 
 .quick-note-label {
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   line-height: 1.1;
 }
 
 .quick-note-chip {
-  font-size: 0.71rem;
-  padding: 0.14rem 0.44rem;
+  font-size: 0.66rem;
+  padding: 0.08rem 0.34rem;
   border-radius: 999px;
-  line-height: 1.2;
+  line-height: 1.15;
   touch-action: manipulation;
 }
 
 .quick-note-collapse-btn {
-  font-size: 0.7rem;
+  font-size: 0.66rem;
 }
 
 /* 1. Efek tekan & hover kartu menu */
@@ -1354,7 +1512,387 @@ body {
   contain-intrinsic-size: auto none auto 64px;
 }
 
-/* 8. Aksesibilitas: hormati preferensi pengurangan gerak perangkat */
+.orders-box-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+  gap: 0.65rem;
+  align-items: start;
+}
+
+.order-grid-card {
+  border: 1px solid var(--bs-border-color);
+  border-top-width: 3px;
+  border-radius: 0.5rem;
+  background-color: var(--bs-body-bg);
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--ui-dur-fast) var(--ui-ease-out), box-shadow var(--ui-dur-fast) ease, border-color var(--ui-dur-fast) ease;
+}
+
+.order-grid-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
+}
+
+.order-grid-card:not(.is-expanded):active {
+  transform: scale(0.97);
+}
+
+.order-grid-card.is-expanded {
+  grid-column: 1 / -1;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.11);
+  border-color: rgba(var(--bs-primary-rgb), 0.45);
+  animation: orderCardExpand 0.24s var(--ui-ease-out);
+}
+
+@media (min-width: 576px) {
+  .order-grid-card.is-expanded {
+    grid-column: span 2;
+  }
+}
+
+@keyframes orderCardExpand {
+  from {
+    opacity: 0.72;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.order-card-detail {
+  animation: wizardFadeSlide 0.22s var(--ui-ease-out);
+}
+
+::view-transition-group(*) {
+  animation-duration: 0.24s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.order-grid-card.order-status-pending { border-top-color: var(--bs-warning); }
+.order-grid-card.order-status-cooking { border-top-color: var(--bs-primary); }
+.order-grid-card.order-status-ready { border-top-color: var(--bs-success); }
+.order-grid-card.order-status-completed { border-top-color: var(--bs-secondary); }
+.order-grid-card.order-status-cancelled { border-top-color: var(--bs-danger); }
+
+/* 8. Animasi Dasbor Restoran (KPI stagger, panel, progress bar, chip, & ping) */
+@keyframes dashFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dashIconPing {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  35% {
+    transform: scale(1.18) rotate(-6deg);
+  }
+  70% {
+    transform: scale(0.95) rotate(3deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes dashRowSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+    background-color: rgba(var(--bs-primary-rgb), 0.12);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+    background-color: transparent;
+  }
+}
+
+@keyframes dashBarGrow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(var(--bar-ratio, 1));
+  }
+}
+
+@keyframes dashChipPop {
+  from {
+    opacity: 0;
+    transform: scale(0.86);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes dashPeriodSwap {
+  0% {
+    opacity: 0.45;
+    transform: translateY(3px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dash-kpi-col {
+  animation: dashFadeUp 0.34s var(--ui-ease-out) both;
+}
+
+.dash-kpi-col:nth-child(1) { animation-delay: 0.02s; }
+.dash-kpi-col:nth-child(2) { animation-delay: 0.07s; }
+.dash-kpi-col:nth-child(3) { animation-delay: 0.12s; }
+.dash-kpi-col:nth-child(4) { animation-delay: 0.17s; }
+
+.dash-anim-panel {
+  animation: dashFadeUp 0.36s var(--ui-ease-out) both;
+  animation-delay: calc(var(--panel-order, 1) * 55ms + 80ms);
+}
+
+.dash-reveal-panel:not([hidden]) {
+  animation: dashFadeUp 0.28s var(--ui-ease-out) both;
+}
+
+.dash-icon-ping {
+  animation: dashIconPing 0.48s var(--ui-ease-out);
+}
+
+.dash-row-enter {
+  animation: dashRowSlideIn 0.45s var(--ui-ease-out) both;
+}
+
+.dash-stagger-item {
+  animation: dashFadeUp 0.28s var(--ui-ease-out) both;
+  animation-delay: calc((var(--sibling-index, 1) - 1) * 45ms);
+}
+
+@supports (animation-delay: calc(sibling-index() * 1ms)) {
+  .dash-stagger-item {
+    animation-delay: calc((sibling-index() - 1) * 45ms);
+  }
+}
+
+.dash-bar-fill {
+  height: 100%;
+  width: 100%;
+  border-radius: 999px;
+  background: var(--bs-primary);
+  transform-origin: left center;
+  transform: scaleX(var(--bar-ratio, 0));
+  animation: dashBarGrow 0.45s var(--ui-ease-out) both;
+}
+
+.dash-table-chip {
+  transition: transform 120ms var(--ui-ease-out), box-shadow var(--ui-dur-fast) ease;
+}
+
+.dash-table-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+}
+
+.dash-chip-enter {
+  animation: dashChipPop 0.24s var(--ui-ease-out) both;
+  animation-delay: calc((var(--sibling-index, 1) - 1) * 28ms);
+}
+
+@supports (animation-delay: calc(sibling-index() * 1ms)) {
+  .dash-chip-enter {
+    animation-delay: calc((sibling-index() - 1) * 28ms);
+  }
+}
+
+.dash-period-swap {
+  animation: dashPeriodSwap 0.24s var(--ui-ease-out);
+}
+
+/* Hover & Touch Interaktif Dasbor */
+.dash-kpi-col .small-box {
+  transition: transform var(--ui-dur-fast) var(--ui-ease-out), box-shadow var(--ui-dur-fast) ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dash-kpi-col .small-box .small-box-icon,
+.dash-kpi-col .small-box .small-box-footer i {
+  transition: transform var(--ui-dur-fast) var(--ui-ease-out);
+}
+
+.dash-kpi-col .small-box:active {
+  transform: scale(0.985);
+}
+
+.dash-anim-panel {
+  transition: box-shadow var(--ui-dur-fast) ease, border-color var(--ui-dur-fast) ease;
+}
+
+.dash-period-btn,
+#admin-quick-links .btn,
+.dash-stagger-item,
+.dash-table-chip,
+#recent-orders-body tr {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dash-period-btn,
+#admin-quick-links .btn {
+  transition: transform 110ms var(--ui-ease-out), box-shadow var(--ui-dur-fast) ease, background-color var(--ui-dur-fast) ease, color var(--ui-dur-fast) ease;
+}
+
+.dash-period-btn:active,
+#admin-quick-links .btn:active {
+  transform: scale(0.96);
+}
+
+.dash-stagger-item {
+  border-radius: 0.4rem;
+  padding: 0.2rem 0.3rem;
+  margin: -0.2rem -0.3rem;
+  transition: transform var(--ui-dur-fast) var(--ui-ease-out), background-color var(--ui-dur-fast) ease;
+}
+
+.dash-stagger-item:active {
+  transform: scale(0.985);
+  background-color: rgba(var(--bs-primary-rgb), 0.08);
+}
+
+.dash-table-chip:active {
+  transform: scale(0.92);
+}
+
+#recent-orders-body tr {
+  transition: background-color var(--ui-dur-fast) ease;
+}
+
+#recent-orders-body tr:active {
+  background-color: rgba(var(--bs-primary-rgb), 0.08);
+}
+
+@media (hover: hover) {
+  .dash-kpi-col .small-box:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+  }
+
+  .dash-kpi-col .small-box:hover .small-box-icon {
+    transform: scale(1.1) rotate(-4deg);
+  }
+
+  .dash-kpi-col .small-box:hover .small-box-footer i {
+    transform: translateX(3px);
+  }
+
+  .dash-anim-panel:hover {
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.07);
+  }
+
+  .dash-period-btn:hover,
+  #admin-quick-links .btn:hover {
+    transform: translateY(-1px);
+  }
+
+  .dash-stagger-item:hover {
+    transform: translateX(2px);
+    background-color: rgba(var(--bs-primary-rgb), 0.045);
+  }
+
+  .dash-table-chip:hover {
+    transform: translateY(-2px) scale(1.04);
+  }
+
+  #recent-orders-body tr:hover {
+    background-color: rgba(var(--bs-primary-rgb), 0.045);
+  }
+}
+
+/* Hover, Touch, & Animasi Lengkap Setiap Elemen Dasbor */
+.dash-header-bar {
+  animation: dashFadeUp 0.28s var(--ui-ease-out) both;
+}
+
+.dash-header-bar .btn,
+.dash-anim-panel .card-header .btn,
+#recent-orders-body .btn,
+#dash-settings-list .list-group-item,
+.dash-kpi-col .badge,
+#dash-menu-health .badge,
+#dash-staff-summary .badge,
+#dash-settings-list .badge {
+  transition: transform 120ms var(--ui-ease-out), background-color var(--ui-dur-fast) ease, color var(--ui-dur-fast) ease, box-shadow var(--ui-dur-fast) ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dash-header-bar .btn:active,
+.dash-anim-panel .card-header .btn:active,
+#recent-orders-body .btn:active {
+  transform: scale(0.95);
+}
+
+.dash-anim-panel .card-title i {
+  display: inline-block;
+  transition: transform var(--ui-dur-fast) var(--ui-ease-out);
+}
+
+#recent-orders-body > tr {
+  animation: dashFadeUp 0.26s var(--ui-ease-out) both;
+}
+
+#recent-orders-body > tr:nth-child(1) { animation-delay: 0.02s; }
+#recent-orders-body > tr:nth-child(2) { animation-delay: 0.05s; }
+#recent-orders-body > tr:nth-child(3) { animation-delay: 0.08s; }
+#recent-orders-body > tr:nth-child(4) { animation-delay: 0.11s; }
+#recent-orders-body > tr:nth-child(5) { animation-delay: 0.14s; }
+#recent-orders-body > tr:nth-child(6) { animation-delay: 0.17s; }
+#recent-orders-body > tr:nth-child(7) { animation-delay: 0.20s; }
+#recent-orders-body > tr:nth-child(8) { animation-delay: 0.23s; }
+
+@media (hover: hover) {
+  .dash-header-bar .btn:hover,
+  .dash-anim-panel .card-header .btn:hover,
+  #recent-orders-body .btn:hover {
+    transform: translateY(-1px);
+  }
+
+  .dash-anim-panel:hover .card-title i {
+    transform: scale(1.12);
+  }
+
+  .dash-kpi-col .badge:hover,
+  #dash-menu-health .badge:hover,
+  #dash-staff-summary .badge:hover,
+  #dash-settings-list .badge:hover {
+    transform: translateY(-1px) scale(1.04);
+  }
+
+  #dash-settings-list .list-group-item:hover {
+    background-color: rgba(var(--bs-primary-rgb), 0.035);
+    padding-left: 0.35rem !important;
+    padding-right: 0.35rem !important;
+    border-radius: 0.35rem;
+  }
+}
+
+/* 9. Aksesibilitas: hormati preferensi pengurangan gerak perangkat */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

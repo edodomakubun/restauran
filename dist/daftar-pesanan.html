@@ -169,28 +169,43 @@
                       Dibatalkan <span class="badge text-bg-danger ms-1" data-status-count="cancelled">0</span>
                     </button>
                   </div>
-                  <input id="orders-search" type="search" class="form-control form-control-sm w-100 w-lg-auto" placeholder="Cari kode / pembeli..." style="min-width: 180px; max-width: 260px;" />
+                  <input id="orders-search" type="search" class="form-control form-control-sm ms-lg-auto" placeholder="Cari kode / pembeli..." style="min-width: 180px; max-width: 240px;" />
+                </div>
+                <div class="px-2 px-md-3 py-2 border-bottom bg-body-tertiary d-flex flex-wrap align-items-center gap-2">
+                  <span class="small fw-semibold text-secondary">Periode:</span>
+                  <div class="btn-group btn-group-sm" role="group" aria-label="Filter periode pesanan">
+                    <button type="button" class="btn btn-primary orders-period-btn" data-period="all" aria-pressed="true">Semua</button>
+                    <button type="button" class="btn btn-outline-primary orders-period-btn" data-period="daily" aria-pressed="false">Hari Ini</button>
+                    <button type="button" class="btn btn-outline-primary orders-period-btn" data-period="weekly" aria-pressed="false">Minggu Ini</button>
+                    <button type="button" class="btn btn-outline-primary orders-period-btn" data-period="monthly" aria-pressed="false">Bulan</button>
+                    <button type="button" class="btn btn-outline-primary orders-period-btn" data-period="range" aria-pressed="false">Kalender</button>
+                  </div>
+                  <div id="orders-month-wrap" class="d-none d-flex flex-wrap align-items-center gap-1">
+                    <select id="orders-month-select" class="form-select form-select-sm" style="width: auto;" aria-label="Pilih bulan">
+                      <option value="1">Januari</option>
+                      <option value="2">Februari</option>
+                      <option value="3">Maret</option>
+                      <option value="4">April</option>
+                      <option value="5">Mei</option>
+                      <option value="6">Juni</option>
+                      <option value="7">Juli</option>
+                      <option value="8">Agustus</option>
+                      <option value="9">September</option>
+                      <option value="10">Oktober</option>
+                      <option value="11">November</option>
+                      <option value="12">Desember</option>
+                    </select>
+                    <input id="orders-year-input" type="number" class="form-control form-control-sm" style="width: 84px;" min="2020" max="2099" aria-label="Tahun" />
+                  </div>
+                  <div id="orders-calendar-wrap" class="d-none d-flex flex-wrap align-items-center gap-1">
+                    <input id="orders-date-from" type="date" class="form-control form-control-sm" style="width: auto;" aria-label="Tanggal mulai" />
+                    <span class="small text-secondary">s/d</span>
+                    <input id="orders-date-to" type="date" class="form-control form-control-sm" style="width: auto;" aria-label="Tanggal selesai" />
+                  </div>
                 </div>
                 <div id="orders-status-view-header" class="px-2 px-md-3 py-2 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2 small"></div>
-                <div id="orders-mobile-list" class="d-md-none p-2 d-flex flex-column gap-2"></div>
-                <div class="table-responsive d-none d-md-block">
-                  <table class="table table-hover align-middle mb-0">
-                    <thead>
-                      <tr>
-                        <th>Kode &amp; Waktu</th>
-                        <th>Pemesan &amp; Layanan</th>
-                        <th>Makanan &amp; Minuman</th>
-                        <th>Total</th>
-                        <th>Status Dapur</th>
-                        <th class="text-end">Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody id="orders-table-body">
-                      <tr>
-                        <td colspan="6" class="text-center text-secondary py-4">Memuat daftar pesanan...</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                <div id="orders-grid" class="orders-box-grid p-2 p-md-3">
+                  <div class="text-center text-secondary py-4 small" style="grid-column: 1 / -1;">Memuat daftar pesanan...</div>
                 </div>
               </div>
             </div>

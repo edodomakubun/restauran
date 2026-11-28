@@ -1,4 +1,4 @@
-const CACHE_NAME = 'restoorder-shell-v55';
+const CACHE_NAME = 'restoorder-shell-v112';
 const APP_SHELL_ASSETS = [
   './css/adminlte.css',
   './css/restaurant.css',

@@ -72,6 +72,30 @@ export function formatTimeShort(iso) {
   }
 }
 
+const ID_DAYS = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+const ID_MONTHS = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+];
+
+function getTimeOfDayLabel(hour) {
+  if (hour >= 4 && hour < 11) return 'Pagi';
+  if (hour >= 11 && hour < 15) return 'Siang';
+  if (hour >= 15 && hour < 18) return 'Sore';
+  return 'Malam';
+}
+
+export function formatOrderDateTimeDetail(iso) {
+  if (!iso) return '-';
+  const dt = new Date(iso);
+  if (!Number.isFinite(dt.getTime())) return '-';
+  const dayName = ID_DAYS[dt.getDay()];
+  const monthName = ID_MONTHS[dt.getMonth()];
+  const timeStr = formatTimeShort(iso);
+  const part = getTimeOfDayLabel(dt.getHours());
+  return `${dayName}, ${dt.getDate()} ${monthName} ${dt.getFullYear()} · ${timeStr} (${part})`;
+}
+
 export function formatElapsed(iso) {
   if (!iso) return '0 mnt';
   const diffSec = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
@@ -513,10 +537,12 @@ function saveSessionSnapshot(state) {
       JSON.stringify({
         orders: state.orders,
         menu: state.menu,
+        tables: state.tables,
         users: state.users,
         settings: state.settings,
         ordersReady: state.ordersReady,
         menuReady: state.menuReady,
+        tablesReady: state.tablesReady,
         usersReady: state.usersReady,
         settingsReady: state.settingsReady,
         ts: Date.now(),
@@ -628,6 +654,12 @@ export async function preloadAllData(role, settingsFromMe = null) {
             sharedStore.settings = { id: snap.id, ...snap.data() };
             sharedStore.settingsReady = true;
           }
+        }),
+        getDocs(collection(fb.db, 'tables')).then((snap) => {
+          sharedStore.tables = snap.docs
+            .map((d) => ({ id: d.id, ...d.data() }))
+            .sort((a, b) => String(a.number || '').localeCompare(String(b.number || ''), 'id', { numeric: true }));
+          sharedStore.tablesReady = true;
         }),
       ];
       if (role === 'admin') {
@@ -962,6 +994,28 @@ export function homePageForRole(role) {
   return './index.html';
 }
 
+export function formatFriendlyError(errOrMsg, fallback = 'Terjadi kesalahan. Silakan coba lagi.') {
+  const raw = String(typeof errOrMsg === 'string' ? errOrMsg : errOrMsg?.message || '').trim();
+  const lower = raw.toLowerCase();
+  if (!raw) return fallback;
+  if (lower.includes('failed to fetch') || lower.includes('networkerror') || lower.includes('load failed')) {
+    return 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda lalu coba lagi.';
+  }
+  if (lower.includes('permission_denied') || lower.includes('insufficient permissions') || lower.includes('firestore rest error 403')) {
+    return 'Anda tidak memiliki izin untuk melakukan tindakan ini, atau aturan database perlu diperbarui.';
+  }
+  if (lower.includes('unauthenticated') || lower.includes('firestore rest error 401')) {
+    return 'Sesi Anda telah berakhir. Silakan masuk kembali.';
+  }
+  if (lower.includes('resource_exhausted') || lower.includes('quota')) {
+    return 'Server sedang sibuk. Tunggu beberapa saat lalu coba lagi.';
+  }
+  if (lower.includes('firestore rest error') || raw.includes('{')) {
+    return 'Terjadi gangguan pada server saat memproses permintaan. Silakan coba beberapa saat lagi.';
+  }
+  return raw;
+}
+
 export async function apiFetch(path, options = {}) {
   const token = await getAuthToken();
   const headers = {
@@ -971,7 +1025,12 @@ export async function apiFetch(path, options = {}) {
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
-  const res = await fetch(path, { ...options, headers });
+  let res;
+  try {
+    res = await fetch(path, { ...options, headers });
+  } catch (networkErr) {
+    throw new Error(formatFriendlyError(networkErr, 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.'));
+  }
   const data = await res.json().catch(() => ({}));
   if (res.status === 401) {
     localStorage.removeItem(TOKEN_STORAGE_KEY);
@@ -985,10 +1044,10 @@ export async function apiFetch(path, options = {}) {
     if (!p.endsWith('/login.html') && !p.endsWith('/login')) {
       globalThis.location.replace('./login.html');
     }
-    throw new Error(data.error || 'Sesi berakhir. Silakan masuk kembali.');
+    throw new Error(formatFriendlyError(data.error, 'Sesi berakhir. Silakan masuk kembali.'));
   }
   if (!res.ok) {
-    throw new Error(data.error || `Permintaan gagal (${res.status}).`);
+    throw new Error(formatFriendlyError(data.error, `Permintaan tidak dapat diproses (kode ${res.status}). Silakan coba lagi.`));
   }
   if (options.method && options.method.toUpperCase() !== 'GET' && syncChannel) {
     syncChannel.postMessage({ type: 'data_changed', path, ts: Date.now() });

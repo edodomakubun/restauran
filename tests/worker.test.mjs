@@ -127,9 +127,25 @@ test('Order lifecycle: create (dine-in/take-away), edit, chef progress, cancel, 
     kasirToken
   );
   assert.equal(created.status, 201);
+  assert.match(created.json.order.orderCode, /^TA-\d{8}-0001$/);
   assert.equal(created.json.order.totalAmount, 68000);
   assert.equal(created.json.order.status, 'pending');
   const orderId = created.json.order.id;
+
+  // Dine-in order uses separate DI-YYYYMMDD-0001 sequence
+  const createdDineIn = await req(
+    'POST',
+    '/api/orders',
+    {
+      customerName: 'Sari',
+      serviceType: 'dine_in',
+      tableNumber: '03',
+      items: [{ name: 'Soto Ayam', category: 'makanan', qty: 1, price: 24000 }],
+    },
+    kasirToken
+  );
+  assert.equal(createdDineIn.status, 201);
+  assert.match(createdDineIn.json.order.orderCode, /^DI-\d{8}-0001$/);
 
   // Kasir edits order while pending -> sets isEdited = true and switches to dine_in
   const edited = await req(

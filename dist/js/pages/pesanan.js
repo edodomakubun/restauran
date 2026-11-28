@@ -94,6 +94,7 @@ export function mount(ctx) {
   let flashCartItem = null;
   const expandedNoteItems = new WeakSet();
   const editingPriceItems = new WeakSet();
+  const expandedCartItems = new WeakSet();
   let currentStep = 0;
 
   // Inisialisasi panel collapsible (Wizard pakai CardWidget, Tulis Menu Manual pakai Collapse datar tanpa card)
@@ -339,7 +340,9 @@ export function mount(ctx) {
             })
           : null;
 
-      const isOptsOpen = expandedNoteItems.has(item);
+      const isItemExpanded = expandedCartItems.has(item);
+      const isItemCollapsed = !isItemExpanded;
+      const isOptsOpen = isItemExpanded && expandedNoteItems.has(item);
       const groups = getQuickNoteGroups(item);
       const chipEntries = [];
 
@@ -390,20 +393,9 @@ export function mount(ctx) {
 
       toggleBtn.addEventListener('click', () => setTrayOpen(trayEl.classList.contains('d-none')));
 
-      const collapseBtn = el(
-        'button',
-        {
-          type: 'button',
-          className: 'btn btn-link btn-xs p-0 text-secondary text-decoration-none quick-note-collapse-btn',
-          onClick: () => setTrayOpen(false),
-        },
-        ['Ciutkan ', el('i', { className: 'bi bi-chevron-up' })]
-      );
-
       trayEl.appendChild(
-        el('div', { className: 'd-flex justify-content-between align-items-center pb-1 border-bottom' }, [
+        el('div', { className: 'pb-1 border-bottom' }, [
           el('span', { className: 'quick-note-label text-secondary fw-semibold', textContent: 'Catatan Cepat' }),
-          collapseBtn,
         ])
       );
 
@@ -432,8 +424,8 @@ export function mount(ctx) {
       }
       syncChipStates();
 
-      const noteControls = el('div', { className: 'mt-1' }, [
-        el('div', { className: 'input-group input-group-sm' }, [noteInput, toggleBtn]),
+      const noteControls = el('div', { className: 'mt-1 position-relative' }, [
+        el('div', { className: 'input-group input-group-sm cart-note-group' }, [noteInput, toggleBtn]),
         trayEl,
       ]);
 
@@ -441,7 +433,7 @@ export function mount(ctx) {
         'button',
         {
           type: 'button',
-          className: `btn btn-xs ${item.qty > 1 ? 'btn-outline-primary' : 'btn-outline-secondary'}`,
+          className: `btn btn-xs cart-action-btn ${item.qty > 1 ? 'btn-outline-primary' : 'btn-outline-secondary'}`,
           title:
             item.qty > 1
               ? 'Pisah 1 porsi ke baris baru agar bisa diberi catatan/level pedas berbeda'
@@ -458,14 +450,13 @@ export function mount(ctx) {
               price: Number(item.price || 0),
               note: '',
             };
-            expandedNoteItems.add(variantItem);
             cart.splice(idx + 1, 0, variantItem);
             renderCart();
           },
         },
         [
           el('i', { className: `bi ${item.qty > 1 ? 'bi-scissors' : 'bi-plus-square-dotted'} me-1` }),
-          item.qty > 1 ? 'Pisah' : '+ Varian',
+          item.qty > 1 ? 'Pisah' : '+Varian',
         ]
       );
 
@@ -514,39 +505,54 @@ export function mount(ctx) {
               }),
             ]
           )
-        : el('div', { className: 'text-secondary small d-flex flex-wrap align-items-center gap-1' }, [
-            el('span', {
-              textContent:
-                Number(item.price) > 0
-                  ? `${formatRupiah(item.price)} × ${item.qty} = ${formatRupiah(item.price * item.qty)}`
-                  : `Harga belum diset × ${item.qty}`,
-            }),
-            el(
-              'button',
-              {
-                type: 'button',
-                className: `btn btn-link btn-xs p-0 text-decoration-none ${Number(item.price) === 0 ? 'text-primary fw-semibold' : 'text-secondary'}`,
-                title: 'Ubah harga satuan menu ini',
-                onClick: () => {
-                  editingPriceItems.add(item);
-                  renderCart();
+        : Number(item.price) === 0
+          ? el('div', { className: 'text-secondary small d-flex flex-wrap align-items-center gap-1' }, [
+              el('span', { textContent: `Harga belum diset × ${item.qty}` }),
+              el(
+                'button',
+                {
+                  type: 'button',
+                  className: 'btn btn-link btn-xs p-0 text-decoration-none text-primary fw-semibold',
+                  title: 'Isi harga satuan menu ini',
+                  onClick: () => {
+                    editingPriceItems.add(item);
+                    renderCart();
+                  },
                 },
-              },
-              Number(item.price) === 0 ? ['Isi Harga'] : [el('i', { className: 'bi bi-pencil' })]
-            ),
-          ]);
+                ['Isi Harga']
+              ),
+            ])
+          : null;
 
       const rowExtraCls =
         item === enterCartItem ? ' cart-row-enter' : item === flashCartItem ? ' cart-row-flash' : '';
-      const row = el('div', { className: `list-group-item py-1 px-2${rowExtraCls}` }, [
-        el('div', { className: 'd-flex flex-wrap justify-content-between align-items-center gap-1' }, [
-          el('div', { className: 'flex-grow-1 min-w-0' }, [
-            el('div', { className: 'fw-semibold small text-break' }, [catPill, item.name, variantBadge, kitchenStatusBadge]),
-            priceRow,
-          ]),
-          el('div', { className: 'd-flex align-items-center gap-1 flex-shrink-0 ms-auto' }, [
-            splitOrVariantBtn,
-            el('div', { className: 'input-group input-group-sm cart-qty-box', style: 'width: 96px;' }, [
+      const row = el(
+        'div',
+        {
+          className: `list-group-item py-1 px-2 cart-item-compact${rowExtraCls}`,
+          title: isItemCollapsed ? 'Klik item untuk membuka detail & catatan' : 'Klik area kosong item untuk menciutkan',
+          onClick: (e) => {
+            if (e.target instanceof Element && e.target.closest('button, input, textarea, select, a, .quick-note-tray')) {
+              return;
+            }
+            if (expandedCartItems.has(item)) {
+              expandedCartItems.delete(item);
+              expandedNoteItems.delete(item);
+            } else {
+              expandedCartItems.add(item);
+            }
+            renderCart();
+          },
+        },
+        [
+          el('div', { className: 'd-flex flex-wrap justify-content-between align-items-center gap-1' }, [
+            el('div', { className: 'flex-grow-1 min-w-0' }, [
+              el('div', { className: 'fw-semibold small text-break' }, [catPill, item.name, variantBadge, kitchenStatusBadge]),
+              isItemCollapsed ? null : priceRow,
+            ]),
+            el('div', { className: 'd-flex align-items-center gap-1 flex-shrink-0 ms-auto' }, [
+              isItemCollapsed ? null : splitOrVariantBtn,
+              el('div', { className: 'input-group input-group-sm cart-qty-box', style: 'width: 72px;' }, [
               el('button', {
                 type: 'button',
                 className: 'btn btn-outline-secondary',
@@ -593,7 +599,7 @@ export function mount(ctx) {
               'button',
               {
                 type: 'button',
-                className: 'btn btn-xs btn-outline-danger',
+                className: 'btn btn-xs btn-outline-danger cart-action-btn',
                 ariaLabel: 'Hapus item',
                 onClick: () => {
                   cart.splice(idx, 1);
@@ -604,7 +610,7 @@ export function mount(ctx) {
             ),
           ]),
         ]),
-        noteControls,
+        isItemCollapsed ? null : noteControls,
       ]);
       wrap.appendChild(row);
     });
@@ -938,6 +944,15 @@ export function mount(ctx) {
       } finally {
         submitBtn.disabled = false;
       }
+    },
+    { signal }
+  );
+
+  const cartWidgetCard = document.getElementById('cart-widget-card');
+  cartWidgetCard?.addEventListener(
+    'minimized.lte.cardwidget',
+    () => {
+      triggerMicroClass(cartWidgetCard, 'cart-card-minimizing', 260);
     },
     { signal }
   );

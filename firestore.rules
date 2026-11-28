@@ -63,6 +63,13 @@ service cloud.firestore {
         || data[field] is timestamp;
     }
 
+    function isOptionalNullableDate(data, field) {
+      return !(field in data)
+        || data[field] == null
+        || (data[field] is string && data[field].size() <= 64)
+        || data[field] is timestamp;
+    }
+
     function isOptionalStr(data, field, maxLen) {
       return !(field in data) || (data[field] is string && data[field].size() <= maxLen);
     }
@@ -137,6 +144,7 @@ service cloud.firestore {
           'status', 'foodStatus', 'drinkStatus', 'cancelReason', 'isEdited',
           'totalAmount', 'paymentStatus', 'paymentMethod', 'discountAmount',
           'paidAmount', 'changeAmount', 'paidAt', 'paidBy', 'items',
+          'cookingStartedAt', 'readyAt',
           'createdBy', 'createdByUid', 'updatedBy', 'createdAt', 'updatedAt'
         ])
         && data.keys().hasAll([
@@ -166,6 +174,8 @@ service cloud.firestore {
         && isOptionalStr(data, 'createdBy', 120)
         && isNonEmptyStr(data, 'createdByUid', 128)
         && isOptionalStr(data, 'updatedBy', 120)
+        && isOptionalNullableDate(data, 'cookingStartedAt')
+        && isOptionalNullableDate(data, 'readyAt')
         && ('createdAt' in data) && isValidDate(data.createdAt)
         && ('updatedAt' in data) && isValidDate(data.updatedAt);
     }
@@ -196,7 +206,7 @@ service cloud.firestore {
 
     function isValidChefOrderUpdate() {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'items', 'status', 'foodStatus', 'drinkStatus', 'updatedBy', 'updatedAt'
+          'items', 'status', 'foodStatus', 'drinkStatus', 'cookingStartedAt', 'readyAt', 'updatedBy', 'updatedAt'
         ])
         && resource.data.status in ['pending', 'cooking', 'ready']
         && request.resource.data.status in ['pending', 'cooking', 'ready', 'completed']
@@ -213,7 +223,7 @@ service cloud.firestore {
       return (
         // Update status selesai oleh kasir (hanya ready -> completed)
         (request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'items', 'status', 'foodStatus', 'drinkStatus', 'updatedBy', 'updatedAt'
+            'items', 'status', 'foodStatus', 'drinkStatus', 'cookingStartedAt', 'readyAt', 'updatedBy', 'updatedAt'
           ])
           && (
             (prev == 'ready' && next == 'completed')
@@ -227,7 +237,7 @@ service cloud.firestore {
         (next == 'cancelled'
           && (prev == 'pending' || (prev == 'cooking' && kasirSetting('kasirCanCancelWhileCooking', false) == true))
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'items', 'status', 'foodStatus', 'drinkStatus', 'cancelReason', 'updatedBy', 'updatedAt'
+            'items', 'status', 'foodStatus', 'drinkStatus', 'cookingStartedAt', 'readyAt', 'cancelReason', 'updatedBy', 'updatedAt'
           ])
           && (nextFood == prevFood || (prevFood != 'none' && nextFood == 'cancelled'))
           && (nextDrink == prevDrink || (prevDrink != 'none' && nextDrink == 'cancelled'))

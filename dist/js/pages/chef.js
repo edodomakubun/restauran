@@ -6,7 +6,7 @@ import {
   applyOptimisticOrderPatch,
   el,
   formatElapsed,
-  formatTimeShort,
+  formatOrderDateTimeDetail,
   showToast,
   statusLabel,
   triggerMicroClass,
@@ -64,15 +64,62 @@ export function mount(ctx) {
   let activeFilter = 'active';
   let serviceFilter = 'all';
   let sectionFilter = 'all';
-  let detailOrderId = null;
+  const expandedChefOrderIds = new Set();
   const inFlightKeys = new Set();
 
-  const detailModalEl = document.getElementById('chefDetailModal');
-  const detailModal = detailModalEl ? new globalThis.bootstrap.Modal(detailModalEl) : null;
-  detailModalEl?.addEventListener(
-    'hidden.bs.modal',
-    () => {
-      detailOrderId = null;
+  const runChefGridTransition = (fn) => {
+    const reduceMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (!reduceMotion && typeof document.startViewTransition === 'function') {
+      return document.startViewTransition(fn);
+    }
+    fn();
+    return null;
+  };
+
+  const scrollExpandedChefCardIntoView = (orderId) => {
+    const reduceMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const grid = document.getElementById('chef-grid');
+    if (!grid) return;
+    const cardEl = Array.from(grid.querySelectorAll('.chef-ticket-wrap.is-expanded')).find(
+      (node) => node.dataset.orderId === String(orderId)
+    );
+    if (!cardEl) return;
+    const rect = cardEl.getBoundingClientRect();
+    const vh = globalThis.innerHeight || document.documentElement.clientHeight;
+    if (rect.top >= 12 && rect.bottom <= vh - 12) return;
+    const block = rect.height > vh - 24 ? 'start' : 'nearest';
+    cardEl.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block, inline: 'nearest' });
+  };
+
+  const toggleChefOrderExpand = (orderId) => {
+    const willExpand = !expandedChefOrderIds.has(orderId);
+    const transition = runChefGridTransition(() => {
+      if (expandedChefOrderIds.has(orderId)) expandedChefOrderIds.delete(orderId);
+      else expandedChefOrderIds.add(orderId);
+      renderTickets();
+    });
+    if (willExpand) {
+      const reduceMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      const scheduleScroll = () => setTimeout(() => scrollExpandedChefCardIntoView(orderId), reduceMotion ? 0 : 260);
+      if (transition && transition.finished && typeof transition.finished.then === 'function') {
+        transition.finished.then(scheduleScroll, scheduleScroll);
+      } else {
+        scheduleScroll();
+      }
+    }
+  };
+
+  document.addEventListener(
+    'click',
+    (e) => {
+      if (expandedChefOrderIds.size === 0) return;
+      if (e.target instanceof Element && e.target.closest('.chef-ticket, .modal, .modal-backdrop')) {
+        return;
+      }
+      runChefGridTransition(() => {
+        expandedChefOrderIds.clear();
+        renderTickets();
+      });
     },
     { signal }
   );
@@ -250,7 +297,26 @@ export function mount(ctx) {
       });
     }
 
-    // 2. Setelah semua item menu selesai dimasak/dibuat -> tombol "Selesai / Diambil"
+    // 2. Saat sedang dimasak -> tombol "Selesai Dimasak / Dibuat" untuk menandai semua item siap
+    if (ord.status === 'cooking' && canCook) {
+      return el(
+        'button',
+        {
+          type: 'button',
+          className: 'btn btn-sm btn-success w-100 fw-semibold chef-action-btn',
+          onClick: (e) =>
+            updateOrderStatus(
+              ord,
+              { status: 'ready', section: 'all' },
+              `Semua menu ${ord.orderCode} selesai dimasak/dibuat & siap disajikan.`,
+              e.currentTarget
+            ),
+        },
+        [el('i', { className: 'bi bi-check2-circle me-1' }), 'Selesai Dimasak / Dibuat']
+      );
+    }
+
+    // 3. Setelah semua item menu selesai dimasak/dibuat -> tombol "Selesai / Diambil"
     if (ord.status === 'ready' && canCompleteReady) {
       return el(
         'button',
@@ -272,85 +338,6 @@ export function mount(ctx) {
     return null;
   };
 
-  const renderDetailModal = (ord) => {
-    const bodyEl = document.getElementById('chef-detail-body');
-    const codeEl = document.getElementById('chef-detail-code');
-    const editedEl = document.getElementById('chef-detail-edited');
-    const statusEl = document.getElementById('chef-detail-status');
-    if (!bodyEl || !ord) return;
-
-    const st = statusLabel(ord.status);
-    if (codeEl) codeEl.textContent = ord.orderCode || ord.id;
-    if (editedEl) editedEl.classList.toggle('d-none', !ord.isEdited);
-    if (statusEl) {
-      statusEl.textContent = st.text;
-      statusEl.className = `badge ${st.badge}`;
-    }
-
-    const { foods, drinks, foodStatus, drinkStatus } = resolveOrderItemsAndSections(ord);
-    const serviceBanner =
-      ord.serviceType === 'dine_in'
-        ? el('div', {
-            className: 'alert alert-primary py-1 px-2 mb-2 chef-service-banner text-center',
-            textContent: `MAKAN DI TEMPAT · MEJA ${ord.tableNumber || '-'}`,
-          })
-        : el('div', {
-            className: 'alert alert-dark py-1 px-2 mb-2 chef-service-banner text-center',
-            textContent: 'DIBUNGKUS (TAKE AWAY)',
-          });
-
-    const foodBox = renderSectionBox(ord, {
-      title: 'Makanan',
-      iconClass: 'bi-egg-fried',
-      items: foods,
-      pillClass: 'text-bg-warning',
-      secStatus: foodStatus,
-      maxItems: Infinity,
-    }).node;
-
-    const drinkBox = renderSectionBox(ord, {
-      title: 'Minuman',
-      iconClass: 'bi-cup-straw',
-      items: drinks,
-      pillClass: 'text-bg-info',
-      secStatus: drinkStatus,
-      maxItems: Infinity,
-    }).node;
-
-    const modalMainAction = buildTicketMainAction(ord);
-
-    bodyEl.replaceChildren(
-      ...[
-        serviceBanner,
-        el('div', { className: 'd-flex flex-wrap justify-content-between gap-2 small text-secondary mb-2' }, [
-          el('span', {}, [el('i', { className: 'bi bi-person me-1' }), ord.customerName || 'Tamu']),
-          el('span', {}, [el('i', { className: 'bi bi-clock me-1' }), `${formatTimeShort(ord.createdAt)} (${formatElapsed(ord.createdAt)})`]),
-        ]),
-        ord.status === 'cancelled'
-          ? el('div', { className: 'alert alert-danger py-2 small mb-2' }, [
-              el('strong', { textContent: 'PESANAN DIBATALKAN: ' }),
-              ord.cancelReason || 'Dibatalkan oleh kasir',
-            ])
-          : null,
-        ord.notes
-          ? el('div', { className: 'alert alert-warning py-1 px-2 small mb-2' }, [
-              el('i', { className: 'bi bi-chat-left-text me-1' }),
-              ord.notes,
-            ])
-          : null,
-        foodBox,
-        drinkBox,
-        modalMainAction ? el('div', { className: 'pt-2 mt-2 border-top' }, [modalMainAction]) : null,
-      ].filter(Boolean)
-    );
-  };
-
-  const openOrderDetail = (ord) => {
-    detailOrderId = ord.id;
-    renderDetailModal(ord);
-    detailModal?.show();
-  };
-
   const renderTickets = () => {
     const cntPending = document.getElementById('cnt-pending');
     const cntCooking = document.getElementById('cnt-cooking');
@@ -369,11 +356,6 @@ export function mount(ctx) {
     setStatWithPop(cntReady, orders.filter((o) => o.status === 'ready').length);
     setStatWithPop(cntCancelled, orders.filter((o) => o.status === 'cancelled').length);
 
-    if (detailOrderId) {
-      const currentOrd = orders.find((o) => o.id === detailOrderId);
-      if (currentOrd) renderDetailModal(currentOrd);
-    }
-
     const grid = document.getElementById('chef-grid');
     if (!grid) return;
     grid.replaceChildren();
@@ -381,7 +363,7 @@ export function mount(ctx) {
     if (!ordersReady && orders.length === 0) {
       for (let i = 0; i < 3; i += 1) {
         grid.appendChild(
-          el('div', { className: 'col-md-6 col-xl-4' }, [
+          el('div', { className: 'chef-ticket-wrap' }, [
             el('div', { className: 'card placeholder-glow' }, [
               el('div', { className: 'card-body py-4' }, [
                 el('span', { className: 'placeholder col-6 mb-2 rounded' }),
@@ -425,82 +407,63 @@ export function mount(ctx) {
       return;
     }
 
-    for (const ord of filtered) {
+    filtered.forEach((ord, idx) => {
       const st = statusLabel(ord.status);
-      const { foods, drinks, foodStatus, drinkStatus } = resolveOrderItemsAndSections(ord);
-      const totalItems = foods.length + drinks.length;
-      const maxPerSection = totalItems > TOTAL_WRAP_THRESHOLD ? INLINE_LIMIT_WHEN_LONG : INLINE_LIMIT_PER_SECTION;
+      const isExpanded = expandedChefOrderIds.has(ord.id);
+      const tableText =
+        ord.serviceType === 'dine_in' ? `Meja ${ord.tableNumber || '-'}` : 'Dibungkus';
 
-      const serviceBanner =
-        ord.serviceType === 'dine_in'
-          ? el('div', {
-              className: 'alert alert-primary py-1 px-2 mb-1 chef-service-banner text-center',
-              textContent: `MAKAN DI TEMPAT · MEJA ${ord.tableNumber || '-'}`,
+      let detailBody = null;
+      if (isExpanded) {
+        const { foods, drinks, foodStatus, drinkStatus } = resolveOrderItemsAndSections(ord);
+        const totalItems = foods.length + drinks.length;
+
+        const serviceBanner =
+          ord.serviceType === 'dine_in'
+            ? el('div', {
+                className: 'alert alert-primary py-1 px-2 mb-1 chef-service-banner text-center',
+                textContent: `MAKAN DI TEMPAT · MEJA ${ord.tableNumber || '-'}`,
+              })
+            : el('div', {
+                className: 'alert alert-dark py-1 px-2 mb-1 chef-service-banner text-center',
+                textContent: 'DIBUNGKUS (TAKE AWAY)',
+              });
+
+        const showFood = sectionFilter === 'all' || sectionFilter === 'food';
+        const showDrink = sectionFilter === 'all' || sectionFilter === 'drink';
+
+        const foodRender = showFood
+          ? renderSectionBox(ord, {
+              title: 'Makanan',
+              iconClass: 'bi-egg-fried',
+              items: foods,
+              pillClass: 'text-bg-warning',
+              secStatus: foodStatus,
+              maxItems: Infinity,
             })
-          : el('div', {
-              className: 'alert alert-dark py-1 px-2 mb-1 chef-service-banner text-center',
-              textContent: 'DIBUNGKUS (TAKE AWAY)',
-            });
+          : { node: null };
 
-      const showFood = sectionFilter === 'all' || sectionFilter === 'food';
-      const showDrink = sectionFilter === 'all' || sectionFilter === 'drink';
+        const drinkRender = showDrink
+          ? renderSectionBox(ord, {
+              title: 'Minuman',
+              iconClass: 'bi-cup-straw',
+              items: drinks,
+              pillClass: 'text-bg-info',
+              secStatus: drinkStatus,
+              maxItems: Infinity,
+            })
+          : { node: null };
 
-      const foodRender = showFood
-        ? renderSectionBox(ord, {
-            title: 'Makanan',
-            iconClass: 'bi-egg-fried',
-            items: foods,
-            pillClass: 'text-bg-warning',
-            secStatus: foodStatus,
-            maxItems: maxPerSection,
-          })
-        : { node: null, hiddenCount: foods.length };
+        const mainActionBtn = buildTicketMainAction(ord);
+        const footerControls = [mainActionBtn].filter(Boolean);
 
-      const drinkRender = showDrink
-        ? renderSectionBox(ord, {
-            title: 'Minuman',
-            iconClass: 'bi-cup-straw',
-            items: drinks,
-            pillClass: 'text-bg-info',
-            secStatus: drinkStatus,
-            maxItems: maxPerSection,
-          })
-        : { node: null, hiddenCount: drinks.length };
-
-      const hasHiddenItems = foodRender.hiddenCount > 0 || drinkRender.hiddenCount > 0;
-      const showDetailBtn = hasHiddenItems || totalItems > 4;
-      const mainActionBtn = buildTicketMainAction(ord);
-
-      const footerControls = [
-        showDetailBtn
-          ? el(
-              'button',
-              {
-                type: 'button',
-                className: 'btn btn-sm btn-outline-info w-100 fw-semibold chef-detail-btn',
-                onClick: () => openOrderDetail(ord),
-              },
-              [el('i', { className: 'bi bi-list-ul me-1' }), `Detail Pesanan (${totalItems} menu)`]
-            )
-          : null,
-        mainActionBtn,
-      ].filter(Boolean);
-
-      const ticket = el('div', { className: `card shadow-sm chef-ticket status-${ord.status}` }, [
-        el('div', { className: 'card-header d-flex flex-wrap justify-content-between align-items-center gap-1 py-1 px-2' }, [
-          el('div', { className: 'd-flex flex-wrap align-items-center gap-1 min-w-0' }, [
-            el('span', { className: 'fw-bold fs-6', textContent: ord.orderCode || ord.id }),
-            ord.isEdited ? el('span', { className: 'badge text-bg-info badge-edited-pulse', textContent: 'DIEDIT' }) : null,
-          ]),
-          el('span', { className: `badge ${st.badge}`, textContent: st.text }),
-        ]),
-        el('div', { className: 'card-body p-2 d-flex flex-column' }, [
+        detailBody = el('div', { className: 'order-card-detail mt-2 pt-2 border-top' }, [
           serviceBanner,
           el('div', { className: 'd-flex flex-wrap justify-content-between gap-1 text-secondary mb-1', style: 'font-size: 0.76rem;' }, [
-            el('span', {}, [el('i', { className: 'bi bi-person me-1' }), ord.customerName || 'Tamu']),
+            el('span', {}, [el('i', { className: 'bi bi-person me-1' }), `Pembeli: ${ord.customerName || 'Tamu'}`]),
             el('span', {}, [
-              el('i', { className: 'bi bi-clock me-1' }),
-              `${formatTimeShort(ord.createdAt)} (${formatElapsed(ord.createdAt)})`,
+              el('i', { className: 'bi bi-calendar-event me-1' }),
+              `${formatOrderDateTimeDetail(ord.createdAt)} · ${formatElapsed(ord.createdAt)}`,
             ]),
           ]),
           ord.status === 'cancelled'
@@ -515,15 +478,62 @@ export function mount(ctx) {
                 ord.notes,
               ])
             : null,
-          el('div', { className: 'flex-grow-1' }, [foodRender.node, drinkRender.node]),
+          el('div', {}, [foodRender.node, drinkRender.node]),
           footerControls.length > 0
-            ? el('div', { className: 'chef-ticket-actions flex-shrink-0 d-grid gap-1 pt-1 mt-1 border-top' }, footerControls)
+            ? el('div', { className: 'chef-ticket-actions d-grid gap-1 pt-1 mt-1 border-top' }, footerControls)
             : null,
-        ]),
-      ]);
+        ]);
+      }
 
-      grid.appendChild(el('div', { className: 'col-sm-6 col-lg-4 col-xxl-3' }, [ticket]));
-    }
+      const ticket = el(
+        'div',
+        {
+          className: `card shadow-sm chef-ticket status-${ord.status}${isExpanded ? ' is-expanded' : ''}`,
+          role: 'button',
+          tabIndex: 0,
+          'aria-expanded': String(isExpanded),
+          title: isExpanded ? 'Klik area kartu untuk menciutkan' : 'Klik kartu untuk memperluas detail pesanan',
+          onClick: (e) => {
+            if (e.target instanceof Element && e.target.closest('button, a, input, select, textarea')) return;
+            toggleChefOrderExpand(ord.id);
+          },
+          onKeyDown: (e) => {
+            if (e.target !== e.currentTarget) return;
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              toggleChefOrderExpand(ord.id);
+            }
+          },
+        },
+        [
+          el('div', { className: 'card-body p-2' }, [
+            el('div', { className: 'fw-bold text-break text-body d-flex flex-wrap align-items-center gap-1' }, [
+              el('span', { className: 'badge text-bg-light text-secondary border', textContent: `#${idx + 1}` }),
+              el('span', { textContent: ord.orderCode || ord.id }),
+              ord.isEdited ? el('span', { className: 'badge text-bg-info badge-edited-pulse', textContent: 'DIEDIT' }) : null,
+            ]),
+            el('div', { className: 'small text-secondary mt-1', textContent: `${tableText} · ${ord.customerName || 'Tamu'}` }),
+            el('div', { className: 'd-flex flex-wrap gap-1 mt-2' }, [
+              el('span', { className: `badge ${st.badge}`, textContent: st.text }),
+            ]),
+            detailBody,
+          ]),
+        ]
+      );
+
+      const safeChefTransName = `chef-card-${String(ord.id || '').replace(/[^a-zA-Z0-9_-]/g, '')}`;
+      grid.appendChild(
+        el(
+          'div',
+          {
+            className: `chef-ticket-wrap${isExpanded ? ' is-expanded' : ''}`,
+            'data-order-id': String(ord.id || ''),
+            style: `view-transition-name: ${safeChefTransName};`,
+          },
+          [ticket]
+        )
+      );
+    });
   };
 
   for (const btn of document.querySelectorAll('.chef-filter')) {
@@ -567,6 +577,5 @@ export function mount(ctx) {
   const timer = setInterval(renderTickets, 30000);
   return () => {
     clearInterval(timer);
-    detailModal?.dispose();
   };
 }
